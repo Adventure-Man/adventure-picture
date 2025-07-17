@@ -1,5 +1,6 @@
 package com.adventure.picturebackend.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.KeyType;
@@ -13,6 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 
 /**
  * User
@@ -72,6 +74,12 @@ public class User implements Serializable {
      */
     @Column("userRole")
     private String userRole;
+
+    /**
+     * 用户积分
+     */
+    @Column("score")
+    private Integer score;
 
     /**
      * 编辑时间

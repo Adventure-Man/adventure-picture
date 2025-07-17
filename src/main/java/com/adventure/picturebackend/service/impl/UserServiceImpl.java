@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.adventure.picturebackend.common.utils.ErrorCode;
 import com.adventure.picturebackend.common.exception.BusinessException;
+import com.adventure.picturebackend.manager.StpKits;
 import com.adventure.picturebackend.mapper.UserMapper;
 import com.adventure.picturebackend.model.dto.user.UserQueryRequest;
 import com.adventure.picturebackend.model.entity.User;
@@ -16,11 +17,13 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.CacheableServiceImpl;
 import com.adventure.picturebackend.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -41,10 +44,17 @@ public class UserServiceImpl extends CacheableServiceImpl<UserMapper, User> impl
         // 先判断是否已登录
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
         if (userObj == null) {
+            userObj = StpKits.SPACE.getSession().get(USER_LOGIN_STATE);
+        }
+        if (userObj == null) {
             throw new BusinessException(ErrorCode.LOGIN_AUTH_ERROR, "未登录");
         }
         // 移除登录态
-        request.getSession().removeAttribute(USER_LOGIN_STATE);
+        HttpSession session = request.getSession();
+        if (session != null) {
+            session.removeAttribute(USER_LOGIN_STATE);
+        }
+        StpKits.SPACE.logout();
         return true;
     }
 
@@ -64,6 +74,9 @@ public class UserServiceImpl extends CacheableServiceImpl<UserMapper, User> impl
     public User getLoginUser(HttpServletRequest request) {
         // 先判断是否已登录
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        if (userObj == null) {
+            userObj = StpKits.SPACE.getTokenSession().get(USER_LOGIN_STATE);
+        }
         User currentUser = (User) userObj;
         if (currentUser == null || currentUser.getId() == null) {
             throw new BusinessException(ErrorCode.LOGIN_AUTH_ERROR);
@@ -104,6 +117,12 @@ public class UserServiceImpl extends CacheableServiceImpl<UserMapper, User> impl
         }
         // 3. 记录用户的登录态
         request.getSession().setAttribute(USER_LOGIN_STATE, user);
+
+        // 先踢出之前所有登录设备 清除用户之前的所有 Token 和 Session：
+        StpKits.SPACE.logoutByTokenValue(StpKits.SPACE.getTokenValue());
+        // 记录登录态到Redis中，与springSession过期过期信息一致
+        StpKits.SPACE.login(user.getId());
+        StpKits.SPACE.getTokenSession().set(USER_LOGIN_STATE, user);
         return this.getLoginUserVO(user);
     }
 
@@ -159,6 +178,8 @@ public class UserServiceImpl extends CacheableServiceImpl<UserMapper, User> impl
         }
         UserVO userVO = new UserVO();
         BeanUtils.copyProperties(user, userVO);
+        LocalDateTime createTime = user.getCreateTime();
+        userVO.setCreateTime(createTime);
         return userVO;
     }
 
@@ -172,24 +193,9 @@ public class UserServiceImpl extends CacheableServiceImpl<UserMapper, User> impl
 
     @Override
     public QueryWrapper getQueryWrapper(UserQueryRequest userQueryRequest) {
-//        if (userQueryRequest == null) {
-//            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
-//        }
-//        Long id = userQueryRequest.getId();
-//        String userAccount = userQueryRequest.getUserAccount();
-//        String userName = userQueryRequest.getUserName();
-//        String userProfile = userQueryRequest.getUserProfile();
-//        String userRole = userQueryRequest.getUserRole();
-//        String sortField = userQueryRequest.getSortField();
-//        String sortOrder = userQueryRequest.getSortOrder();
-//        //指定排序字段
-//        return QueryWrapper.create().eq("id", id, ObjUtil.isNotNull(id))
-//                .eq("userRole", userRole, StrUtil.isNotBlank(userRole))
-//                .like("userAccount", userAccount, StrUtil.isNotBlank(userAccount))
-//                .like("userName", userName, StrUtil.isNotBlank(userName))
-//                .like("userProfile", userProfile, StrUtil.isNotBlank(userProfile))
-//                //指定排序字段
-//                .orderBy(new QueryColumn(""), true);
+        if (userQueryRequest == null) {
+            return new QueryWrapper();
+        }
         String userName = userQueryRequest.getUserName();
         String userAccount = userQueryRequest.getUserAccount();
         String userProfile = userQueryRequest.getUserProfile();
@@ -207,6 +213,12 @@ public class UserServiceImpl extends CacheableServiceImpl<UserMapper, User> impl
             queryWrapper.orderBy(new QueryOrderBy(new QueryColumn(sortField),sortOrder));
         }
         return queryWrapper;
+    }
+
+    @Override
+    public boolean isAdmin(User user) {
+        // 判断用户是否是管理员
+        return user != null && UserRoleEnum.ADMIN.getValue().equals(user.getUserRole());
     }
 
 

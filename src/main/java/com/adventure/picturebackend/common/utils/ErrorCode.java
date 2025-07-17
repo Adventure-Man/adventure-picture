@@ -16,6 +16,8 @@ public enum ErrorCode {
     SERVER_ERROR(50000,"server_error","服务器请求异常,请稍后再试!"),
     SERVER_RESPONSE_ERROR(50001,"server_response_error","业务异常!"),
     SERVER_NOT_FOUND(50002,"server_not_found","服务器未找到!"),
+    OPERATION_ERROR(50003, "operation_error", "操作失败!"),
+    NOT_FOUND_ERROR(50004, "not_found_error", "数据不存在!"),
     NETWORK_AUTH_ERROR(50011,"Network Authentication Required","网络请求错误,请重试!"),
     ;
 

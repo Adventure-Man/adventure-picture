@@ -7,14 +7,17 @@ import com.adventure.picturebackend.common.resp.BaseResponse;
 import com.adventure.picturebackend.common.utils.ErrorCode;
 import com.adventure.picturebackend.common.utils.ResultUtils;
 import com.adventure.picturebackend.manager.CosManager;
+import com.qcloud.cos.model.COSObject;
+import com.qcloud.cos.model.COSObjectInputStream;
+import com.qcloud.cos.model.PutObjectResult;
+import com.qcloud.cos.utils.IOUtils;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.IOException;
 
 /**
 * @author Adventure
@@ -44,7 +47,7 @@ public class FileController {
         try {
             file = File.createTempFile(filePath, null);
             multipartFile.transferTo(file);
-            cosManager.putObject(filePath, file);
+            PutObjectResult putObjectResult = cosManager.putObject(filePath, file);
             return ResultUtils.success(filePath);
         }
         catch (Exception e) {
@@ -62,4 +65,33 @@ public class FileController {
         }
     }
 
+    /**
+     * 测试文件下载
+     *
+     * @param filePath 文件路径
+     * @param response 响应对象
+     */
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @GetMapping("/test/download")
+    public void testDownloadFile(String filePath, HttpServletResponse response) throws IOException {
+        COSObjectInputStream cosObjectInput = null;
+        try {
+            COSObject cosObject = cosManager.getObject(filePath);
+            cosObjectInput = cosObject.getObjectContent();
+            byte[] bytes = IOUtils.toByteArray(cosObjectInput);
+            response.setContentType("application/octet-stream;charset=UTF-8");
+            response.setHeader("Content-Disposition", "attachment; filename=" + filePath);
+            // 写入响应
+            response.getOutputStream().write(bytes);
+            response.getOutputStream().flush();
+        } catch (Exception e) {
+            log.error("file download error, filepath = " + filePath, e);
+            throw new BusinessException(ErrorCode.SERVER_RESPONSE_ERROR, "下载失败");
+        } finally {
+            // 用完流之后一定要调用 close()
+            if (cosObjectInput != null) {
+                cosObjectInput.close();
+            }
+        }
+    }
 }

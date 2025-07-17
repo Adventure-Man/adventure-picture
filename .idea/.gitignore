@@ -1,5 +1,6 @@
 # Default ignored files
-application-dev.yml
+src/main/java/generated
+src/main/resources/application-dev.yml
 /shelf/
 /workspace.xml
 # Editor-based HTTP Client requests
