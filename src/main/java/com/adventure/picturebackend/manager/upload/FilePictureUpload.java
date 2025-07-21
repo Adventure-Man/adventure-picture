@@ -21,7 +21,7 @@ import java.util.Arrays;
 public class FilePictureUpload extends FileUploadTemplate {
 
     @Override
-    protected void checkPicture(Object inputSource) throws IOException {
+    protected String checkPicture(Object inputSource) throws IOException {
         MultipartFile multipartFile = (MultipartFile) inputSource;
         ThrowUtils.throwIf(multipartFile.isEmpty(), ErrorCode.PARAMS_ERROR, "上传文件为空");
         // 1.1 校验文件大小
@@ -37,7 +37,7 @@ public class FilePictureUpload extends FileUploadTemplate {
         // 1.3 校验图片信息
         BufferedImage read = ImageIO.read(multipartFile.getInputStream());
         ThrowUtils.throwIf(read == null, ErrorCode.PARAMS_ERROR, "上传文件不是图片");
-
+        return suffix;
     }
 
     @Override

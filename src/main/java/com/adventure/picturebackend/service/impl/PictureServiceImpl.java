@@ -9,10 +9,7 @@ import com.adventure.picturebackend.manager.FileManager;
 import com.adventure.picturebackend.manager.upload.FilePictureUpload;
 import com.adventure.picturebackend.manager.upload.FileUploadTemplate;
 import com.adventure.picturebackend.manager.upload.UrlPictureUpload;
-import com.adventure.picturebackend.model.dto.picture.PictureQueryRequest;
-import com.adventure.picturebackend.model.dto.picture.PictureReviewRequest;
-import com.adventure.picturebackend.model.dto.picture.PictureUploadRequest;
-import com.adventure.picturebackend.model.dto.picture.UploadPictureResult;
+import com.adventure.picturebackend.model.dto.picture.*;
 import com.adventure.picturebackend.model.entity.Picture;
 import com.adventure.picturebackend.model.entity.User;
 import com.adventure.picturebackend.model.enums.PictureReviewStatusEnum;
@@ -29,6 +26,10 @@ import com.adventure.picturebackend.service.PictureService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -72,6 +73,62 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     @Resource
     private UrlPictureUpload urlPictureUpload;
 
+    @Override
+    public Integer uploadPictureByBatch(PictureUploadByBatchRequest pictureUploadByBatchRequest, User loginUser) {
+        String searchText = pictureUploadByBatchRequest.getSearchText();
+        Integer count = pictureUploadByBatchRequest.getCount();
+        String namePrefix = pictureUploadByBatchRequest.getNamePrefix();
+        if (StrUtil.isBlank(namePrefix)){
+            namePrefix = searchText;
+        }
+        ThrowUtils.throwIf(count <= 0 || count > 30, ErrorCode.PARAMS_ERROR, "数量参数错误");
+        String format = String.format("https://cn.bing.com/images/search?q=%s&mmasync=1", searchText);
+        Document document = null;
+        try {
+            document = Jsoup.connect(format).get();
+        } catch (Exception e) {
+            log.error("图片上传失败", e);
+            throw new RuntimeException(e);
+        }
+        Elements imgElementList = document.getElementsByClass("imgpt");
+        log.info("图片搜索结果: {}", document.html());
+        ThrowUtils.throwIf(imgElementList.size() <= 0, ErrorCode.SERVER_RESPONSE_ERROR, "图片搜索失败");
+        int uploadCount = 0;
+        for (Element element : imgElementList) {
+            Element imgElement = element.selectFirst("img.mimg");
+            String imageUrl = null;
+            if (imgElement != null){
+                imageUrl = imgElement.attr("src");
+                log.info("图片地址: {}", imageUrl);
+            }
+            if(StrUtil.isBlank(imageUrl)){
+                log.info("图片地址为空: {}", imageUrl);
+                continue;
+            }
+            // 处理图片url的格式
+            int i = imageUrl.indexOf("?");
+            imageUrl = i > 0 ? imageUrl.substring(0, i) : imageUrl;
+            // 上传图片
+            PictureUploadRequest pictureUploadRequest = new PictureUploadRequest();
+            if(!StrUtil.isBlank(namePrefix)){
+                pictureUploadRequest.setPicName(namePrefix + (uploadCount + 1));
+            }
+            try {
+                PictureVO pictureVO = this.uploadPicture(imageUrl, pictureUploadRequest, loginUser);
+                log.info("图片上传成功: {}", pictureVO);
+                uploadCount++;
+            } catch (Exception e) {
+                log.error("图片上传失败", e);
+                continue;
+            }
+            if(uploadCount >= count){
+                break;
+            }
+        }
+        ThrowUtils.throwIf(uploadCount <= 0, ErrorCode.SERVER_RESPONSE_ERROR, "图片上传失败");
+        return uploadCount;
+    }
+
     // 上传图片
     @Override
     public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) throws IOException {
@@ -91,7 +148,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         // 保存图片信息
         Picture picture = Picture.builder()
                 .url(uploadPictureResult.getUrl())
-                .name(uploadPictureResult.getPicName())
                 .picWidth(uploadPictureResult.getPicWidth())
                 .picHeight(uploadPictureResult.getPicHeight())
                 .picSize(uploadPictureResult.getPicSize())
@@ -99,6 +155,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
                 .picScale(uploadPictureResult.getPicScale())
                 .userId(loginUser.getId())
                 .build();
+        // 设置图片名称
+        String picName = uploadPictureResult.getPicName();
+        if (pictureUploadRequest != null && StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
+            picName = pictureUploadRequest.getPicName();
+        }
+        picture.setName(picName);
+
         // 填充审核参数
         this.fillReviewParams(picture, loginUser);
         boolean result = this.save(picture);
@@ -279,7 +342,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         String reviewMessage = pictureReviewRequest.getReviewMessage();
         ThrowUtils.throwIf(id == null || reviewStatus == null || reviewStatus == PictureReviewStatusEnum.REVIEWING.getValue(), ErrorCode.PARAMS_ERROR);
         try {
-            Boolean isLocked = redisTemplate.opsForValue().setIfAbsent(LOCKKEY+id, "locked", 2, TimeUnit.SECONDS);
+            Boolean isLocked = redisTemplate.opsForValue().setIfAbsent(LOCKKEY + id, "locked", 2, TimeUnit.SECONDS);
             ThrowUtils.throwIf(!Boolean.TRUE.equals(isLocked), ErrorCode.OPERATION_ERROR, "获取锁失败，操作失败");
             Picture picture = this.getById(id);
             ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
@@ -308,7 +371,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
                 }
             }
             log.info("图片审核完成，图片id：{}，审核状态：{}，审核信息：{}", id, reviewStatus, reviewMessage);
-        }finally {
+        } finally {
             redisTemplate.delete(LOCKKEY + id);
         }
     }
@@ -326,7 +389,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             picture.setReviewStatus(PictureReviewStatusEnum.REVIEWING.getValue());
         }
     }
-
 
 
 }

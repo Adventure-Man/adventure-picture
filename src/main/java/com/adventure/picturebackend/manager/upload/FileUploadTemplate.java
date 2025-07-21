@@ -47,11 +47,10 @@ public abstract class FileUploadTemplate {
      */
     public UploadPictureResult uploadPicture(Object inputSource, String uploadPathPrefix) throws IOException {
         // 1.校验图片
-        checkPicture(inputSource);
+        String suffix =  checkPicture(inputSource);
         // 2.获取文件名
-        String imageUrl =(String) inputSource;
         String fileName = getSourceFileName(inputSource);
-        String suffix = imageUrl != null ? imageUrl.substring(imageUrl.lastIndexOf(".")) : ".jpg";
+        log.info("suffix = " + suffix);
         // 2.0 图片上传地址
         String randomString = IdUtil.fastSimpleUUID();
         String filePath = String.format("%s/%s%s", DateUtil.formatDate(new Date()), randomString, suffix);
@@ -83,6 +82,7 @@ public abstract class FileUploadTemplate {
         uploadPictureResult.setUrl(cosClientConfig.getHost() + uploadPath);
         int height = imageInfo.getHeight();
         int width = imageInfo.getWidth();
+        // 图片名称
         uploadPictureResult.setPicName(FileUtil.mainName(fileName));
         uploadPictureResult.setPicSize(FileUtil.size(file));
         uploadPictureResult.setPicWidth(width);
@@ -97,7 +97,7 @@ public abstract class FileUploadTemplate {
      * 校验输入源
      * @param inputSource
      */
-    protected abstract void checkPicture(Object inputSource) throws IOException;
+    protected abstract String checkPicture(Object inputSource) throws IOException;
 
     /**
      * 获取源文件名

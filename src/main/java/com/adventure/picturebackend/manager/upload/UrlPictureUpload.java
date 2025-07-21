@@ -9,6 +9,7 @@ import cn.hutool.http.Method;
 import com.adventure.picturebackend.common.exception.BusinessException;
 import com.adventure.picturebackend.common.utils.ErrorCode;
 import com.adventure.picturebackend.common.utils.ThrowUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -24,10 +25,11 @@ import java.util.List;
  * @description url图片上传
  */
 @Service
+@Slf4j
 public class UrlPictureUpload extends FileUploadTemplate {
     @Override
-    protected void checkPicture(Object inputSource) throws IOException {
-        String imageUrl =(String) inputSource;
+    protected String checkPicture(Object inputSource) throws IOException {
+        String imageUrl = (String) inputSource;
         ThrowUtils.throwIf(StrUtil.isBlank(imageUrl), ErrorCode.PARAMS_ERROR, "上传图片地址不能为空");
 
         try {
@@ -38,8 +40,7 @@ public class UrlPictureUpload extends FileUploadTemplate {
         }
 
         // 2. 校验 URL 协议
-        ThrowUtils.throwIf(!(imageUrl.startsWith("http://") || imageUrl.startsWith("https://")),
-                ErrorCode.PARAMS_ERROR, "仅支持 HTTP 或 HTTPS 协议的文件地址");
+        ThrowUtils.throwIf(!(imageUrl.startsWith("http://") || imageUrl.startsWith("https://")), ErrorCode.PARAMS_ERROR, "仅支持 HTTP 或 HTTPS 协议的文件地址");
 
         // 3. 发送 HEAD 请求以验证文件是否存在
         HttpResponse response = null;
@@ -47,15 +48,15 @@ public class UrlPictureUpload extends FileUploadTemplate {
             response = HttpUtil.createRequest(Method.HEAD, imageUrl).execute();
             // 未正常返回，无需执行其他判断
             if (response.getStatus() != HttpStatus.HTTP_OK) {
-                return;
+                return "";
             }
             // 4. 校验文件类型
             String contentType = response.header("Content-Type");
+            log.info("Content-Type: " + contentType.toLowerCase());
             if (StrUtil.isNotBlank(contentType)) {
                 // 允许的图片类型
                 final List<String> ALLOW_CONTENT_TYPES = Arrays.asList("image/jpeg", "image/jpg", "image/png", "image/webp");
-                ThrowUtils.throwIf(!ALLOW_CONTENT_TYPES.contains(contentType.toLowerCase()),
-                        ErrorCode.PARAMS_ERROR, "文件类型错误");
+                ThrowUtils.throwIf(!ALLOW_CONTENT_TYPES.contains(contentType.toLowerCase()), ErrorCode.PARAMS_ERROR, "文件类型错误");
             }
             // 5. 校验文件大小
             String contentLengthStr = response.header("Content-Length");
@@ -68,6 +69,8 @@ public class UrlPictureUpload extends FileUploadTemplate {
                     throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件大小格式错误");
                 }
             }
+            // 返回图片后缀名
+            return "." + contentType.substring(contentType.indexOf("/") + 1);
         } finally {
             if (response != null) {
                 response.close();
@@ -77,8 +80,8 @@ public class UrlPictureUpload extends FileUploadTemplate {
 
     @Override
     protected String getSourceFileName(Object inputSource) {
-            String imageUrl = (String) inputSource;
-            return FileUtil.mainName(imageUrl);
+        String imageUrl = (String) inputSource;
+        return FileUtil.mainName(imageUrl);
     }
 
     @Override

@@ -8,7 +8,6 @@ import com.adventure.picturebackend.common.resp.BaseResponse;
 import com.adventure.picturebackend.common.utils.ErrorCode;
 import com.adventure.picturebackend.common.utils.ResultUtils;
 import com.adventure.picturebackend.common.utils.ThrowUtils;
-import com.adventure.picturebackend.manager.upload.FilePictureUpload;
 import com.adventure.picturebackend.manager.upload.UrlPictureUpload;
 import com.adventure.picturebackend.model.dto.picture.*;
 import com.adventure.picturebackend.model.entity.Picture;
@@ -48,12 +47,27 @@ public class PictureController {
     private UrlPictureUpload uploadPicture;
 
     /**
+     * 批量抓取图片
+     *
+     * @param pictureUploadByBatchRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/upload/batch")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Integer> uploadPictureByBatch(@RequestBody PictureUploadByBatchRequest pictureUploadByBatchRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureUploadByBatchRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        int uploadCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, loginUser);
+        return ResultUtils.success(uploadCount);
+    }
+
+
+    /**
      * 通过 URL 上传图片（可重新上传）
      */
     @PostMapping("/upload/url")
-    public BaseResponse<PictureVO> uploadPictureByUrl(
-            @RequestBody PictureUploadRequest pictureUploadRequest,
-            HttpServletRequest request) throws IOException {
+    public BaseResponse<PictureVO> uploadPictureByUrl(@RequestBody PictureUploadRequest pictureUploadRequest, HttpServletRequest request) throws IOException {
         User loginUser = userService.getLoginUser(request);
         String imageUrl = pictureUploadRequest.getImageUrl();
         PictureVO pictureVO = pictureService.uploadPicture(imageUrl, pictureUploadRequest, loginUser);
@@ -61,14 +75,12 @@ public class PictureController {
     }
 
 
-
     /**
      * 上传图片（可重新上传）
      */
     @PostMapping("/upload")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<PictureVO> uploadPicture(@RequestPart("file") MultipartFile multipartFile,
-                                                 PictureUploadRequest pictureUploadRequest, HttpServletRequest request) {
+    public BaseResponse<PictureVO> uploadPicture(@RequestPart("file") MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
         PictureVO pictureVO = pictureService.uploadPicture(multipartFile, pictureUploadRequest, loginUser);
         return ResultUtils.success(pictureVO);
@@ -234,8 +246,7 @@ public class PictureController {
         if (pageSize > 20) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize),
-                pictureService.getQueryWrapper(pictureQueryRequest));
+        Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest));
         Page<PictureVO> pictureVOPage = pictureService.getPictureVoList(picturePage, request);
         return ResultUtils.success(pictureVOPage);
 
@@ -259,13 +270,10 @@ public class PictureController {
 
     @PostMapping("/review")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> doPictureReview(@RequestBody PictureReviewRequest pictureReviewRequest,
-                                                 HttpServletRequest request) {
+    public BaseResponse<Boolean> doPictureReview(@RequestBody PictureReviewRequest pictureReviewRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(pictureReviewRequest == null, ErrorCode.PARAMS_ERROR);
         User loginUser = userService.getLoginUser(request);
         pictureService.doPictureReview(pictureReviewRequest, loginUser);
         return ResultUtils.success(true);
     }
-
-
 }

@@ -117,7 +117,7 @@ public class FileManager {
         String fileName = multipartFile.getOriginalFilename();
         ThrowUtils.throwIf(StrUtil.isBlank(fileName), ErrorCode.PARAMS_ERROR, "上传文件格式错误");
         String suffix = fileName.substring(fileName.lastIndexOf("."));
-        final String[] SUPPORT_FILE_SUFFIX = new String[]{".png", ".jpg", ".jpeg", ".gif", ".bmp"};
+        final String[] SUPPORT_FILE_SUFFIX = new String[]{".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"};
         ThrowUtils.throwIf(!Arrays.asList(SUPPORT_FILE_SUFFIX).contains(suffix), ErrorCode.PARAMS_ERROR, "上传文件格式不支持");
         // 1.3 校验图片信息
         BufferedImage read = ImageIO.read(multipartFile.getInputStream());
