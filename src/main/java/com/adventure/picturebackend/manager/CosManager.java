@@ -1,5 +1,6 @@
 package com.adventure.picturebackend.manager;
 
+import cn.hutool.core.io.FileUtil;
 import com.adventure.picturebackend.config.CosClientConfig;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.model.*;
@@ -9,15 +10,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 @Slf4j
-public class CosManager {  
-  
+public class CosManager {
+
     @Resource
     private CosClientConfig cosClientConfig;
-  
-    @Resource  
+
+    @Resource
     private COSClient cosClient;
 
     /**
@@ -27,27 +30,39 @@ public class CosManager {
      * @param file 文件
      */
     public PutObjectResult putPictureObject(String key, File file) {
-        PutObjectRequest putObjectRequest = new PutObjectRequest(cosClientConfig.getBucket(), key,
-                file);
+        PutObjectRequest putObjectRequest = new PutObjectRequest(cosClientConfig.getBucket(), key, file);
         // 对图片进行处理（获取基本信息也被视作为一种处理）
         PicOperations picOperations = new PicOperations();
         // 1 表示返回原图信息
         picOperations.setIsPicInfo(1);
+        // 图片压缩处理
+        List<PicOperations.Rule> rules = new ArrayList<>();
+        String webpKey = FileUtil.mainName(key) + ".webp";
+        PicOperations.Rule compressRule = new PicOperations.Rule();
+        compressRule.setRule("imageMogr2/format/webp");
+        compressRule.setBucket(cosClientConfig.getBucket());
+        compressRule.setFileId(webpKey);
+        rules.add(compressRule);
         // 构造处理参数
+        picOperations.setRules(rules);
         putObjectRequest.setPicOperations(picOperations);
         return cosClient.putObject(putObjectRequest);
     }
 
+
     /**
      * 将本地文件上传到 COS
-     * @param key 图片的 key
+     *
+     * @param key  图片的 key
      * @param file 上传的
      * @return PutObjectResult 上传后的响应
      */
     public PutObjectResult putObject(String key, File file) {
         PutObjectRequest putObjectRequest = new PutObjectRequest(cosClientConfig.getBucket(), key, file);
         return cosClient.putObject(putObjectRequest);
-    };
+    }
+
+    ;
 
     /**
      * 下载文件，从云存储中下载到本地

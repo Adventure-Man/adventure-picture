@@ -261,7 +261,7 @@ public class PictureController {
     }
 
     /**
-     * 分页获取图片列表。vo
+     * 分页获取图片列表vo
      * 1.脱敏
      * 2.限制图片条数
      *

@@ -10,13 +10,16 @@ import com.adventure.picturebackend.manager.CosManager;
 import com.adventure.picturebackend.model.dto.picture.UploadPictureResult;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.model.PutObjectResult;
+import com.qcloud.cos.model.ciModel.persistence.CIObject;
 import com.qcloud.cos.model.ciModel.persistence.ImageInfo;
+import com.qcloud.cos.model.ciModel.persistence.ProcessResults;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 
 /**
  * 上传图片并获取图片信息
@@ -64,6 +67,12 @@ public abstract class FileUploadTemplate {
             // 2.3上传图片到cos
             PutObjectResult putObjectResult = cosManager.putPictureObject(uploadPath, file);
             ImageInfo imageInfo = putObjectResult.getCiUploadResult().getOriginalInfo().getImageInfo();
+            ProcessResults processResults = putObjectResult.getCiUploadResult().getProcessResults();
+            List<CIObject> objectList = processResults.getObjectList();
+            if (objectList != null && !objectList.isEmpty()){
+                CIObject ciObject = objectList.get(0);
+                return getUploadPictureResult(uploadPath, ciObject);
+            }
             // 3.封装图片返回信息
             return getUploadPictureResult(uploadPath, imageInfo, fileName, file);
         } catch (Exception e) {
@@ -74,6 +83,24 @@ public abstract class FileUploadTemplate {
         }
 
 
+    }
+
+    private UploadPictureResult getUploadPictureResult(String originFileName, CIObject ciObject) {
+        UploadPictureResult uploadPictureResult = new UploadPictureResult();
+        Integer width = ciObject.getWidth();
+        Integer height = ciObject.getHeight();
+        long size = ciObject.getSize().longValue();
+        String format = ciObject.getFormat();
+        uploadPictureResult.setUrl(cosClientConfig.getHost() + ciObject.getKey());
+        // 图片名称
+        uploadPictureResult.setPicName(FileUtil.mainName(originFileName));
+        uploadPictureResult.setPicSize(size);
+        uploadPictureResult.setPicWidth(width);
+        uploadPictureResult.setPicHeight(height);
+        uploadPictureResult.setPicFormat(format);
+        // 宽高比
+        uploadPictureResult.setPicScale(Math.round(height * 1.0 / width * 100) / 100.0);
+        return uploadPictureResult;
     }
 
     private UploadPictureResult getUploadPictureResult(String uploadPath, ImageInfo imageInfo, String fileName, File file) {
