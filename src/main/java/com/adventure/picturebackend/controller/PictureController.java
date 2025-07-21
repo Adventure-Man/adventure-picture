@@ -1,5 +1,6 @@
 package com.adventure.picturebackend.controller;
 
+import cn.hutool.json.JSONUtil;
 import com.adventure.picturebackend.aop.annotation.AuthCheck;
 import com.adventure.picturebackend.common.constant.UserConstant;
 import com.adventure.picturebackend.common.exception.BusinessException;
@@ -13,10 +14,13 @@ import com.adventure.picturebackend.model.dto.picture.*;
 import com.adventure.picturebackend.model.entity.Picture;
 import com.adventure.picturebackend.model.entity.PictureTagCategory;
 import com.adventure.picturebackend.model.entity.User;
+import com.adventure.picturebackend.model.enums.PictureReviewStatusEnum;
 import com.adventure.picturebackend.model.vo.PictureVO;
 import com.adventure.picturebackend.service.UserService;
 import com.mybatisflex.core.paginate.Page;
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.adventure.picturebackend.service.PictureService;
@@ -26,6 +30,8 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 图片 控制层。
@@ -45,6 +51,9 @@ public class PictureController {
 
     @Autowired
     private UrlPictureUpload uploadPicture;
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
 
     /**
      * 批量抓取图片
@@ -232,7 +241,7 @@ public class PictureController {
 
 
     /**
-     * 分页获取图片列表。
+     * 分页获取图片列表。vo
      * 1.脱敏
      * 2.限制图片条数
      *
@@ -249,7 +258,24 @@ public class PictureController {
         Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest));
         Page<PictureVO> pictureVOPage = pictureService.getPictureVoList(picturePage, request);
         return ResultUtils.success(pictureVOPage);
+    }
 
+    /**
+     * 分页获取图片列表。vo
+     * 1.脱敏
+     * 2.限制图片条数
+     *
+     * @return 所有数据
+     */
+    @PostMapping("list/page/vo/cache")
+    public BaseResponse<Page<PictureVO>> listPicturePageVOCache(@RequestBody PictureQueryRequest pictureQueryRequest, HttpServletRequest request) {
+        int pageSize = pictureQueryRequest.getPageSize();
+        // 限制爬虫
+        if (pageSize > 20) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        Page<PictureVO> pictureVOPage = pictureService.pageVOCache(pictureQueryRequest, request);
+        return ResultUtils.success(pictureVOPage);
     }
 
     /**

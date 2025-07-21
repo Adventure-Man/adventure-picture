@@ -2,8 +2,10 @@ package com.adventure.picturebackend.service.impl;
 
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.adventure.picturebackend.common.exception.BusinessException;
 import com.adventure.picturebackend.common.utils.ErrorCode;
+import com.adventure.picturebackend.common.utils.ResultUtils;
 import com.adventure.picturebackend.common.utils.ThrowUtils;
 import com.adventure.picturebackend.manager.FileManager;
 import com.adventure.picturebackend.manager.upload.FilePictureUpload;
@@ -16,6 +18,8 @@ import com.adventure.picturebackend.model.enums.PictureReviewStatusEnum;
 import com.adventure.picturebackend.model.vo.PictureVO;
 import com.adventure.picturebackend.model.vo.UserVO;
 import com.adventure.picturebackend.service.UserService;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryColumn;
 import com.mybatisflex.core.query.QueryOrderBy;
@@ -26,6 +30,7 @@ import com.adventure.picturebackend.service.PictureService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -37,10 +42,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -72,6 +74,14 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
     @Resource
     private UrlPictureUpload urlPictureUpload;
+
+    private final Cache<String, String> LOCAL_CACHE =
+            Caffeine.newBuilder().initialCapacity(1024)
+                    .maximumSize(10000L)
+                    // 缓存 5 分钟移除
+                    .expireAfterWrite(5L, TimeUnit.MINUTES)
+                    .build();
+
 
     @Override
     public Integer uploadPictureByBatch(PictureUploadByBatchRequest pictureUploadByBatchRequest, User loginUser) {
@@ -264,7 +274,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         queryWrapper.eq("picHeight", picHeight, ObjUtil.isNotEmpty(picHeight));
         queryWrapper.eq("picSize", picSize, ObjUtil.isNotEmpty(picSize));
         queryWrapper.eq("picScale", picScale, ObjUtil.isNotEmpty(picScale));
-        // 用户只能查询审核通过的图片
+        // 普通用户只能查询审核通过的图片
         queryWrapper.eq("reviewerId", reviewerId, ObjUtil.isNotEmpty(reviewerId));
         queryWrapper.eq("reviewStatus", PictureReviewStatusEnum.PASS.getValue(), ObjUtil.isNotEmpty(reviewStatus));
         queryWrapper.eq("reviewMessage", reviewMessage, ObjUtil.isNotEmpty(reviewMessage));
@@ -388,6 +398,42 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             // 非管理员，创建或编辑都要改为待审核
             picture.setReviewStatus(PictureReviewStatusEnum.REVIEWING.getValue());
         }
+    }
+
+    @Override
+    public Page<PictureVO> pageVOCache(PictureQueryRequest pictureQueryRequest, HttpServletRequest request) {
+        int current = pictureQueryRequest.getCurrent();
+        int pageSize = pictureQueryRequest.getPageSize();
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+        // 构建缓存key, 然后从缓存查询
+        String jsonStr = JSONUtil.toJsonStr(pictureQueryRequest);
+        String key = String.format("picture:list:page:vo:%s", DigestUtils.md5Hex(jsonStr));
+        String cacheValue;
+        try {
+            cacheValue = LOCAL_CACHE.getIfPresent(key);
+            if (cacheValue != null) {
+                Page<PictureVO> bean = JSONUtil.toBean(cacheValue, Page.class);
+                return bean;
+            }
+            cacheValue = redisTemplate.opsForValue().get(key);
+            if (cacheValue != null) {
+                LOCAL_CACHE.put(key, cacheValue);
+                Page<PictureVO> bean = JSONUtil.toBean(cacheValue, Page.class);
+                return bean;
+            }
+        } catch (Exception e) {
+            log.error("缓存读取异常:{},缓存key:{}", e, key);
+        }
+        Page<Picture> picturePage = this.page(new Page<>(current, pageSize), this.getQueryWrapper(pictureQueryRequest));
+        Page<PictureVO> pictureVOPage = this.getPictureVoList(picturePage, request);
+        // 存入Redis缓存
+        // 设置10——20分钟过期
+        try {
+            redisTemplate.opsForValue().set(key, JSONUtil.toJsonStr(pictureVOPage), new Random().nextInt(10) + 10, TimeUnit.MINUTES);
+        }catch (Exception e){
+            log.error("redis缓存设置异常:{},缓存key:{}", e, key);
+        }
+        return pictureVOPage;
     }
 
 

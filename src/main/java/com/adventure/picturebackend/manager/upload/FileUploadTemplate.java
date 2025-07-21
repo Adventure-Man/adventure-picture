@@ -50,7 +50,6 @@ public abstract class FileUploadTemplate {
         String suffix =  checkPicture(inputSource);
         // 2.获取文件名
         String fileName = getSourceFileName(inputSource);
-        log.info("suffix = " + suffix);
         // 2.0 图片上传地址
         String randomString = IdUtil.fastSimpleUUID();
         String filePath = String.format("%s/%s%s", DateUtil.formatDate(new Date()), randomString, suffix);

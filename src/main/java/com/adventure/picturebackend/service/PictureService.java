@@ -98,4 +98,12 @@ public interface PictureService extends IService<Picture> {
      * @param loginUser
      */
     void fillReviewParams(Picture picture, User loginUser);
+
+    /**
+     * 图片列表缓存
+     * @param pictureQueryRequest
+     * @param request
+     * @return
+     */
+    Page<PictureVO> pageVOCache(PictureQueryRequest pictureQueryRequest, HttpServletRequest request);
 }

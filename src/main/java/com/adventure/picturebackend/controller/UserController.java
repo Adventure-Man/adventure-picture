@@ -1,7 +1,5 @@
 package com.adventure.picturebackend.controller;
 
-import cn.hutool.core.util.ObjUtil;
-import cn.hutool.core.util.StrUtil;
 import com.adventure.picturebackend.aop.annotation.AuthCheck;
 import com.adventure.picturebackend.common.constant.UserConstant;
 import com.adventure.picturebackend.common.utils.ErrorCode;
@@ -13,13 +11,9 @@ import com.adventure.picturebackend.common.utils.ThrowUtils;
 import com.adventure.picturebackend.common.exception.BusinessException;
 import com.adventure.picturebackend.model.dto.user.*;
 import com.adventure.picturebackend.model.entity.User;
-import com.adventure.picturebackend.model.enums.UserRoleEnum;
 import com.adventure.picturebackend.model.vo.LoginUserVO;
 import com.adventure.picturebackend.model.vo.UserVO;
 import com.mybatisflex.core.paginate.Page;
-import com.mybatisflex.core.query.QueryColumn;
-import com.mybatisflex.core.query.QueryCondition;
-import com.mybatisflex.core.query.QueryOrderBy;
 import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.BeanUtils;
@@ -32,7 +26,6 @@ import com.adventure.picturebackend.service.UserService;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.adventure.picturebackend.common.constant.CommonNumberConstant.*;
 
