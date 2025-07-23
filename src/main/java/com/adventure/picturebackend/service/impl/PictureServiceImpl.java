@@ -5,8 +5,8 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.adventure.picturebackend.common.exception.BusinessException;
 import com.adventure.picturebackend.common.utils.ErrorCode;
-import com.adventure.picturebackend.common.utils.ResultUtils;
 import com.adventure.picturebackend.common.utils.ThrowUtils;
+import com.adventure.picturebackend.manager.CosManager;
 import com.adventure.picturebackend.manager.FileManager;
 import com.adventure.picturebackend.manager.upload.FilePictureUpload;
 import com.adventure.picturebackend.manager.upload.FileUploadTemplate;
@@ -37,10 +37,13 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -75,6 +78,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     @Resource
     private UrlPictureUpload urlPictureUpload;
 
+    @Resource
+    private CosManager cosManager;
+
     private final Cache<String, String> LOCAL_CACHE =
             Caffeine.newBuilder().initialCapacity(1024)
                     .maximumSize(10000L)
@@ -88,7 +94,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         String searchText = pictureUploadByBatchRequest.getSearchText();
         Integer count = pictureUploadByBatchRequest.getCount();
         String namePrefix = pictureUploadByBatchRequest.getNamePrefix();
-        if (StrUtil.isBlank(namePrefix)){
+        if (StrUtil.isBlank(namePrefix)) {
             namePrefix = searchText;
         }
         ThrowUtils.throwIf(count <= 0 || count > 30, ErrorCode.PARAMS_ERROR, "数量参数错误");
@@ -107,11 +113,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         for (Element element : imgElementList) {
             Element imgElement = element.selectFirst("img.mimg");
             String imageUrl = null;
-            if (imgElement != null){
+            if (imgElement != null) {
                 imageUrl = imgElement.attr("src");
                 log.info("图片地址: {}", imageUrl);
             }
-            if(StrUtil.isBlank(imageUrl)){
+            if (StrUtil.isBlank(imageUrl)) {
                 log.info("图片地址为空: {}", imageUrl);
                 continue;
             }
@@ -120,7 +126,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             imageUrl = i > 0 ? imageUrl.substring(0, i) : imageUrl;
             // 上传图片
             PictureUploadRequest pictureUploadRequest = new PictureUploadRequest();
-            if(!StrUtil.isBlank(namePrefix)){
+            if (!StrUtil.isBlank(namePrefix)) {
                 pictureUploadRequest.setPicName(namePrefix + (uploadCount + 1));
             }
             try {
@@ -131,7 +137,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
                 log.error("图片上传失败", e);
                 continue;
             }
-            if(uploadCount >= count){
+            if (uploadCount >= count) {
                 break;
             }
         }
@@ -158,6 +164,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         // 保存图片信息
         Picture picture = Picture.builder()
                 .url(uploadPictureResult.getUrl())
+                .thumbnailUrl(uploadPictureResult.getThumbnailUrl())
                 .picWidth(uploadPictureResult.getPicWidth())
                 .picHeight(uploadPictureResult.getPicHeight())
                 .picSize(uploadPictureResult.getPicSize())
@@ -350,7 +357,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         Long id = pictureReviewRequest.getId();
         Integer reviewStatus = pictureReviewRequest.getReviewStatus();
         String reviewMessage = pictureReviewRequest.getReviewMessage();
-        ThrowUtils.throwIf(id == null || reviewStatus == null || reviewStatus == PictureReviewStatusEnum.REVIEWING.getValue(), ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(id == null || reviewStatus == null
+                || reviewStatus == PictureReviewStatusEnum.REVIEWING.getValue(), ErrorCode.PARAMS_ERROR);
         try {
             Boolean isLocked = redisTemplate.opsForValue().setIfAbsent(LOCKKEY + id, "locked", 2, TimeUnit.SECONDS);
             ThrowUtils.throwIf(!Boolean.TRUE.equals(isLocked), ErrorCode.OPERATION_ERROR, "获取锁失败，操作失败");
@@ -430,11 +438,37 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         // 设置10——20分钟过期
         try {
             redisTemplate.opsForValue().set(key, JSONUtil.toJsonStr(pictureVOPage), new Random().nextInt(10) + 10, TimeUnit.MINUTES);
-        }catch (Exception e){
+        } catch (Exception e) {
             log.error("redis缓存设置异常:{},缓存key:{}", e, key);
         }
         return pictureVOPage;
     }
 
+    @Async
+    @Override
+    public void clearPictureFile(Picture oldPicture) {
+        // 判断该图片是否被多条记录使用
+        String pictureUrl = oldPicture.getUrl();
+        long count = this.getMapper().selectCountByQuery(new QueryWrapper()
+                .eq(Picture::getUrl, pictureUrl));
+        // 有不止一条记录用到了该图片，不清理
+        if (count > 1) {
+            return;
+        }
+        try {
+            // 提取路径部分
+            String picturePath = new URL(pictureUrl).getPath();
+            cosManager.deleteObject(picturePath);
 
+            // 清理缩略图
+            String thumbnailUrl = oldPicture.getThumbnailUrl();
+            if (StrUtil.isNotBlank(thumbnailUrl)) {
+                String thumbnailPath = new URL(thumbnailUrl).getPath();
+                cosManager.deleteObject(thumbnailPath);
+            }
+        } catch (MalformedURLException e) {
+            log.error("处理图片删除时遇到格式错误的 URL。图片 URL: {}", pictureUrl, e);
+            throw new BusinessException(ErrorCode.SERVER_ERROR, "格式错误的 URL");
+        }
+    }
 }

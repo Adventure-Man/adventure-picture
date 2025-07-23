@@ -145,4 +145,10 @@ public class Picture implements Serializable {
     @Column("reviewTime")
     private LocalDateTime reviewTime;
 
+    /**
+     * 缩略图 url
+     */
+    private String thumbnailUrl;
+
+
 }

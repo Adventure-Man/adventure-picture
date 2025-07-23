@@ -3,6 +3,7 @@ package com.adventure.picturebackend.manager;
 import cn.hutool.core.io.FileUtil;
 import com.adventure.picturebackend.config.CosClientConfig;
 import com.qcloud.cos.COSClient;
+import com.qcloud.cos.exception.CosClientException;
 import com.qcloud.cos.model.*;
 import com.qcloud.cos.model.ciModel.persistence.PicOperations;
 import jakarta.annotation.Resource;
@@ -35,7 +36,7 @@ public class CosManager {
         PicOperations picOperations = new PicOperations();
         // 1 表示返回原图信息
         picOperations.setIsPicInfo(1);
-        // 图片压缩处理
+        // 2 图片压缩处理
         List<PicOperations.Rule> rules = new ArrayList<>();
         String webpKey = FileUtil.mainName(key) + ".webp";
         PicOperations.Rule compressRule = new PicOperations.Rule();
@@ -43,8 +44,19 @@ public class CosManager {
         compressRule.setBucket(cosClientConfig.getBucket());
         compressRule.setFileId(webpKey);
         rules.add(compressRule);
-        // 构造处理参数
-        picOperations.setRules(rules);
+        // 3 图片缩略图处理 只对大于20kb的图片进行压缩
+        if(file.length() > 20 * 1024){
+            PicOperations.Rule thumbnailRule = new PicOperations.Rule();
+            thumbnailRule.setBucket(cosClientConfig.getBucket());
+            String thumbnailKey = FileUtil.mainName(key) + "_thumbnail." + FileUtil.getSuffix(key);
+            thumbnailRule.setFileId(thumbnailKey);
+            // 缩略图处理 缩放规则，大于原图128就不处理
+            thumbnailRule.setRule(String.format("imageMogr2/thumbnail/%sx%s>", 128, 128));
+            rules.add(thumbnailRule);
+            // 构造处理参数
+            picOperations.setRules(rules);
+        }
+
         putObjectRequest.setPicOperations(picOperations);
         return cosClient.putObject(putObjectRequest);
     }
@@ -74,6 +86,16 @@ public class CosManager {
         GetObjectRequest getObjectRequest = new GetObjectRequest(cosClientConfig.getBucket(), key);
         return cosClient.getObject(getObjectRequest);
     }
+
+    /**
+     * 删除对象
+     *
+     * @param key 文件 key
+     */
+    public void deleteObject(String key) throws CosClientException {
+        cosClient.deleteObject(cosClientConfig.getBucket(), key);
+    }
+
 
 //    public UploadPictureResult uploadPicture(String imageUrl, String uploadPathPrefix) throws IOException {
 //        // 1.校验图片

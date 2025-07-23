@@ -11,6 +11,7 @@ import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -106,4 +107,7 @@ public interface PictureService extends IService<Picture> {
      * @return
      */
     Page<PictureVO> pageVOCache(PictureQueryRequest pictureQueryRequest, HttpServletRequest request);
+
+    @Async
+    void clearPictureFile(Picture oldPicture);
 }

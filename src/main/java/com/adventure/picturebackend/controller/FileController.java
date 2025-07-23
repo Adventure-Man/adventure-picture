@@ -22,7 +22,7 @@ import java.io.IOException;
 /**
 * @author Adventure
 * @date 2025/7/13
-* @description TODO
+* @description 文件上传下载能力测试
 */
 @RestController
 @RequestMapping("/file")
@@ -79,6 +79,7 @@ public class FileController {
             COSObject cosObject = cosManager.getObject(filePath);
             cosObjectInput = cosObject.getObjectContent();
             byte[] bytes = IOUtils.toByteArray(cosObjectInput);
+            // 设置响应内容类型为二进制流
             response.setContentType("application/octet-stream;charset=UTF-8");
             response.setHeader("Content-Disposition", "attachment; filename=" + filePath);
             // 写入响应

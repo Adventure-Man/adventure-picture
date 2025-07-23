@@ -110,6 +110,11 @@ public class PictureTableDef extends TableDef {
     public final QueryColumn REVIEW_STATUS = new QueryColumn(this, "reviewStatus");
 
     /**
+     * 缩略图 url
+     */
+    public final QueryColumn THUMBNAIL_URL = new QueryColumn(this, "thumbnail_url");
+
+    /**
      * 审核信息
      */
     public final QueryColumn REVIEW_MESSAGE = new QueryColumn(this, "reviewMessage");
@@ -122,7 +127,7 @@ public class PictureTableDef extends TableDef {
     /**
      * 默认字段，不包含逻辑删除或者 large 等字段。
      */
-    public final QueryColumn[] DEFAULT_COLUMNS = new QueryColumn[]{ID, URL, NAME, TAGS, USER_ID, PIC_SIZE, CATEGORY, EDIT_TIME, IS_DELETE, PIC_SCALE, PIC_WIDTH, PIC_FORMAT, PIC_HEIGHT, CREATE_TIME, REVIEW_TIME, REVIEWER_ID, UPDATE_TIME, INTRODUCTION, REVIEW_STATUS, REVIEW_MESSAGE};
+    public final QueryColumn[] DEFAULT_COLUMNS = new QueryColumn[]{ID, URL, NAME, TAGS, USER_ID, PIC_SIZE, CATEGORY, EDIT_TIME, IS_DELETE, PIC_SCALE, PIC_WIDTH, PIC_FORMAT, PIC_HEIGHT, CREATE_TIME, REVIEW_TIME, REVIEWER_ID, UPDATE_TIME, INTRODUCTION, REVIEW_STATUS, THUMBNAIL_URL, REVIEW_MESSAGE};
 
     public PictureTableDef() {
         super("", "picture");

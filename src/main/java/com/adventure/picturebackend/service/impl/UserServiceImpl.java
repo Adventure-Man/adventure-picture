@@ -44,7 +44,7 @@ public class UserServiceImpl extends CacheableServiceImpl<UserMapper, User> impl
         // 先判断是否已登录
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
         if (userObj == null) {
-            userObj = StpKits.SPACE.getSession().get(USER_LOGIN_STATE);
+            userObj = StpKits.SPACE.getTokenSession().get(USER_LOGIN_STATE);
         }
         if (userObj == null) {
             throw new BusinessException(ErrorCode.LOGIN_AUTH_ERROR, "未登录");

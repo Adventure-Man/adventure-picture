@@ -241,10 +241,10 @@ public class PictureController {
 
 
     /**
-     * 分页获取图片列表。vo
+     * 分页获取图片列表。vo ,
      * 1.脱敏
      * 2.限制图片条数
-     *
+     * 3.不用登录
      * @return 所有数据
      */
     @PostMapping("list/page/vo")
