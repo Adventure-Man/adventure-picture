@@ -36,6 +36,12 @@ public class PictureUpdateRequest implements Serializable {
      */
     private List<String> tags;
 
+    /**
+     * 空间id
+     */
+    private Long spaceId;
+
+
     public static Picture dtoToObj(PictureUpdateRequest pictureUpdateRequest) {
         if (pictureUpdateRequest == null) {
             return null;

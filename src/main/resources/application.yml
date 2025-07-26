@@ -89,3 +89,21 @@ cos:
     region: ${cos.client.region}
     secret-id: ${cos.client.secret-id}
     secret-key: ${cos.client.secret-key}
+# 空间配置
+space:
+  capacity:
+    max-count: 100
+    # 100M
+    max-size: 104857600
+    ordinary:
+      max-count: 100
+      max-size: 104857600
+    professional:
+      max-count: 1000
+      # 1000M
+      max-size: 1048576000
+    flagship:
+      max-count: 10000
+      # 10000M
+      max-size: 10485760000
+

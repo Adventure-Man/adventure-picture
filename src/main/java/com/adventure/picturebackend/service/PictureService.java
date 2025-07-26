@@ -1,9 +1,6 @@
 package com.adventure.picturebackend.service;
 
-import com.adventure.picturebackend.model.dto.picture.PictureQueryRequest;
-import com.adventure.picturebackend.model.dto.picture.PictureReviewRequest;
-import com.adventure.picturebackend.model.dto.picture.PictureUploadByBatchRequest;
-import com.adventure.picturebackend.model.dto.picture.PictureUploadRequest;
+import com.adventure.picturebackend.model.dto.picture.*;
 import com.adventure.picturebackend.model.entity.Picture;
 import com.adventure.picturebackend.model.entity.User;
 import com.adventure.picturebackend.model.vo.PictureVO;
@@ -34,7 +31,7 @@ public interface PictureService extends IService<Picture> {
 
 
     /**
-     * URL上传图片
+     * URL 和 本地上传图片
      *
      * @param inputSource
      * @param pictureUploadRequest
@@ -43,15 +40,15 @@ public interface PictureService extends IService<Picture> {
      */
     PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) throws IOException;
 
-    /**
-     * 上传图片
-     *
-     * @param multipartFile
-     * @param pictureUploadRequest
-     * @param loginUser
-     * @return
-     */
-    PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, User loginUser);
+//    /**
+//     * 上传图片
+//     *
+//     * @param multipartFile
+//     * @param pictureUploadRequest
+//     * @param loginUser
+//     * @return
+//     */
+//    PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, User loginUser);
 
     /**
      * 获取查询条件
@@ -59,7 +56,7 @@ public interface PictureService extends IService<Picture> {
      * @param pictureQueryRequest
      * @return
      */
-    QueryWrapper getQueryWrapper(PictureQueryRequest pictureQueryRequest);
+    QueryWrapper getQueryWrapper(PictureQueryRequest pictureQueryRequest, HttpServletRequest request);
 
     /**
      * 获取单条数据转vo
@@ -108,6 +105,39 @@ public interface PictureService extends IService<Picture> {
      */
     Page<PictureVO> pageVOCache(PictureQueryRequest pictureQueryRequest, HttpServletRequest request);
 
+    /**
+     * 异步清理图片文件
+     * @param oldPicture
+     */
     @Async
     void clearPictureFile(Picture oldPicture);
+
+    /**
+     * 管理员-修改图片
+     * @param pictureUpdateRequest
+     * @return
+     */
+    Boolean updatePicture(PictureUpdateRequest pictureUpdateRequest, User loginUser);
+
+    /**
+     * 删除和修改是校验图片权限
+     * @param loginUser
+     * @param picture
+     */
+    void checkPictureAuth(User loginUser, Picture picture);
+
+    /**
+     * 删除图片
+     * @param pictureId
+     * @param loginUser
+     * @return
+     */
+    boolean removeByPictureId(Long pictureId, User loginUser);
+
+    /**
+     * 用户-编辑图片
+     * @param pictureEditRequest
+     * @return
+     */
+    boolean editPicture(PictureEditRequest pictureEditRequest, User loginUser);
 }

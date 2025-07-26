@@ -28,7 +28,7 @@ public class Codegen {
         globalConfig.setBasePackage("generated");
         //设置表前缀和只生成哪些表
         // globalConfig.setTablePrefix("tz_");
-        globalConfig.setGenerateTable("picture");
+        globalConfig.setGenerateTable("space");
         //设置生成 entity 并启用 Lombok
         globalConfig.setEntityGenerateEnable(true);
         globalConfig.setEntityWithLombok(true);

@@ -33,11 +33,14 @@ public class FilePictureUpload extends FileUploadTemplate {
         ThrowUtils.throwIf(StrUtil.isBlank(fileName), ErrorCode.PARAMS_ERROR, "上传文件格式错误");
         String suffix = fileName.substring(fileName.lastIndexOf("."));
         final String[] SUPPORT_FILE_SUFFIX = new String[]{".png", ".jpg", ".jpeg", ".gif", ".bmp"};
-        ThrowUtils.throwIf(!Arrays.asList(SUPPORT_FILE_SUFFIX).contains(suffix), ErrorCode.PARAMS_ERROR, "上传文件格式不支持");
+        // 忽略大小写检查文件后缀
+        boolean isSupported = Arrays.stream(SUPPORT_FILE_SUFFIX).anyMatch(s -> s.equalsIgnoreCase(suffix));
+        ThrowUtils.throwIf(!isSupported, ErrorCode.PARAMS_ERROR, "上传文件格式不支持");
+//        ThrowUtils.throwIf(!Arrays.asList(SUPPORT_FILE_SUFFIX).contains(suffix), ErrorCode.PARAMS_ERROR, "上传文件格式不支持");
         // 1.3 校验图片信息
         BufferedImage read = ImageIO.read(multipartFile.getInputStream());
         ThrowUtils.throwIf(read == null, ErrorCode.PARAMS_ERROR, "上传文件不是图片");
-        return suffix;
+        return suffix.toLowerCase();
     }
 
     @Override

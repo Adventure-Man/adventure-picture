@@ -1,5 +1,6 @@
-package generated.entity;
+package com.adventure.picturebackend.model.entity;
 
+import com.adventure.picturebackend.model.enums.SpaceLevelEnum;
 import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.KeyType;
@@ -15,74 +16,80 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 用户 实体类。
+ *  实体类。
  *
  * @author Administrator
- * @since 2025-07-06
+ * @since 2025-07-25
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("user")
-public class User implements Serializable {
+@Table("space")
+public class Space implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     /**
-     * id
+     * 空间id
      */
     @Id(keyType = KeyType.Auto)
     private Long id;
 
     /**
-     * 账号
+     * 空间名称
      */
-    @Column("userAccount")
-    private String userAccount;
+    @Column("spaceName")
+    private String spaceName;
 
     /**
-     * 密码
+     * 空间级别：0-普通版 1-专业版 2-旗舰版
      */
-    @Column("userPassword")
-    private String userPassword;
+    @Column("spaceLevel")
+    private SpaceLevelEnum spaceLevel;
 
     /**
-     * 用户昵称
+     * 空间图片的最大总大小
      */
-    @Column("userName")
-    private String userName;
+    @Column("maxSize")
+    private Long maxSize;
 
     /**
-     * 用户头像
+     * 当前空间下的图片数量
      */
-    @Column("userAvatar")
-    private String userAvatar;
+    @Column("maxCount")
+    private Long maxCount;
 
     /**
-     * 用户简介
+     * 当前空间的总大小
      */
-    @Column("userProfile")
-    private String userProfile;
+    @Column("totalSize")
+    private Long totalSize;
 
     /**
-     * 用户角色：user/admin
+     * 当前空间图片的总数量
      */
-    @Column("userRole")
-    private String userRole;
+    @Column("totalCount")
+    private Long totalCount;
 
     /**
-     * 编辑时间
+     * 创建用户id
      */
-    @Column("editTime")
-    private LocalDateTime editTime;
+    @Column("userId")
+    private Long userId;
 
     /**
      * 创建时间
      */
     @Column("createTime")
     private LocalDateTime createTime;
+
+    /**
+     * 编辑时间
+     */
+    @Column("editTime")
+    private LocalDateTime editTime;
 
     /**
      * 更新时间

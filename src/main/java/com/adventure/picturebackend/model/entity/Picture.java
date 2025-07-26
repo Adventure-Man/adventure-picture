@@ -148,7 +148,13 @@ public class Picture implements Serializable {
     /**
      * 缩略图 url
      */
+    @Column("thumbnailUrl")
     private String thumbnailUrl;
 
+    /**
+     * 空间id
+     */
+    @Column("spaceId")
+    private Long spaceId;
 
 }

@@ -1,5 +1,6 @@
 package com.adventure.picturebackend.controller;
 
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.json.JSONUtil;
 import com.adventure.picturebackend.aop.annotation.AuthCheck;
 import com.adventure.picturebackend.common.constant.UserConstant;
@@ -89,7 +90,7 @@ public class PictureController {
      */
     @PostMapping("/upload")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<PictureVO> uploadPicture(@RequestPart("file") MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, HttpServletRequest request) {
+    public BaseResponse<PictureVO> uploadPicture(@RequestPart("file") MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, HttpServletRequest request) throws IOException {
         User loginUser = userService.getLoginUser(request);
         PictureVO pictureVO = pictureService.uploadPicture(multipartFile, pictureUploadRequest, loginUser);
         return ResultUtils.success(pictureVO);
@@ -107,18 +108,10 @@ public class PictureController {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        // 判断图片是否存在
-        Long id = deleteRequest.getId();
-        Picture picture = pictureService.getById(id);
-        ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
-        // 仅本人或者管理员可以删除
+        Long pictureId = deleteRequest.getId();
         User loginUser = userService.getLoginUser(httpServletRequest);
-        if (!userService.isAdmin(loginUser) && !picture.getUserId().equals(loginUser.getId())) {
-            throw new BusinessException(ErrorCode.NOT_PERMISSION);
-        }
-        boolean b = pictureService.removeById(id);
-        ThrowUtils.throwIf(!b, ErrorCode.OPERATION_ERROR);
-        return ResultUtils.success(b);
+        boolean res = pictureService.removeByPictureId(pictureId, loginUser);
+        return ResultUtils.success(true);
     }
 
     /**
@@ -129,25 +122,14 @@ public class PictureController {
      */
     @PutMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> update(@RequestBody PictureUpdateRequest pictureUpdateRequest) {
+    public BaseResponse<Boolean> update(@RequestBody PictureUpdateRequest pictureUpdateRequest, HttpServletRequest request) {
         // 参数校验
         if (pictureUpdateRequest == null || pictureUpdateRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        // 实体类和dto转换, 将List<String> tags转为JSON字符串
-        Picture picture = PictureUpdateRequest.dtoToObj(pictureUpdateRequest);
-        // 校验图片信息(格式，大小)
-        pictureService.validPicture(picture);
-        // 判断更新的图片是否存在
-        Picture picture1 = pictureService.getById(pictureUpdateRequest.getId());
-        ThrowUtils.throwIf(picture1 == null, ErrorCode.NOT_FOUND_ERROR);
-        // 填充审核信息
-        User loginUser = userService.getById(picture1.getUserId());
-        pictureService.fillReviewParams(picture1, loginUser);
-        // 更新图片信息
-        boolean b = pictureService.updateById(picture);
-        ThrowUtils.throwIf(!b, ErrorCode.OPERATION_ERROR);
-        return ResultUtils.success(b);
+        User loginUser = userService.getLoginUser(request);
+        Boolean flag = pictureService.updatePicture(pictureUpdateRequest, loginUser);
+        return ResultUtils.success(flag);
     }
 
     /**
@@ -163,9 +145,16 @@ public class PictureController {
         if (id <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
+        // 查询数据库
         Picture picture = pictureService.getById(id);
         if (picture == null) {
             return ResultUtils.error(ErrorCode.NOT_FOUND_ERROR);
+        }
+        // 空间权限校验 只空间管理员查看
+        Long spaceId = picture.getSpaceId();
+        if (spaceId != null) {
+            User loginUser = userService.getLoginUser(request);
+            pictureService.checkPictureAuth(loginUser, picture);
         }
         return ResultUtils.success(picture);
     }
@@ -182,8 +171,15 @@ public class PictureController {
         if (id <= 0) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR);
         }
+        // 查询数据库
         Picture picture = pictureService.getById(id);
         ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
+        // 空间权限校验 只空间管理员查看
+        Long spaceId = picture.getSpaceId();
+        if (spaceId != null) {
+            User loginUser = userService.getLoginUser(request);
+            pictureService.checkPictureAuth(loginUser, picture);
+        }
         PictureVO pictureVO = pictureService.getPictureVO(picture, request);
         return ResultUtils.success(pictureVO);
     }
@@ -196,30 +192,14 @@ public class PictureController {
      * @return {@code true} 添加成功，{@code false} 添加失败
      */
     @PostMapping("/edit")
-    public BaseResponse<Boolean> save(@RequestBody PictureEditRequest pictureEditRequest, HttpServletRequest request) {
+    public BaseResponse<Boolean> edit(@RequestBody PictureEditRequest pictureEditRequest, HttpServletRequest request) {
         // 参数校验
         if (pictureEditRequest == null || pictureEditRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        // 实体类和dto转换, 将List<String> tags转为JSON字符串
-        Picture picture = PictureEditRequest.dtoToObj(pictureEditRequest);
-        // 设置编辑时间
-        picture.setEditTime(LocalDateTime.now());
-        // 校验图片信息(格式，大小)
-        pictureService.validPicture(picture);
-        // 判断更新的图片是否存在
-        Picture picture1 = pictureService.getById(pictureEditRequest.getId());
-        ThrowUtils.throwIf(picture1 == null, ErrorCode.NOT_FOUND_ERROR);
-        // 仅当前用户和管理员可以编辑
         User loginUser = userService.getLoginUser(request);
-        if (!picture1.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
-            throw new BusinessException(ErrorCode.NOT_PERMISSION);
-        }
-        // 填充审核参数
-        pictureService.fillReviewParams(picture, loginUser);
-        // 更新图片信息
-        boolean result = pictureService.updateById(picture);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        boolean res = pictureService.editPicture(pictureEditRequest, loginUser);
+        ThrowUtils.throwIf(!res, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
     }
 
@@ -232,10 +212,10 @@ public class PictureController {
      */
     @PostMapping("/list/page")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Page<Picture>> listPicturePage(@RequestBody PictureQueryRequest pictureQueryRequest) {
+    public BaseResponse<Page<Picture>> listPicturePage(@RequestBody PictureQueryRequest pictureQueryRequest, HttpServletRequest request) {
         int current = pictureQueryRequest.getCurrent();
         int pageSize = pictureQueryRequest.getPageSize();
-        Page<Picture> page = pictureService.page(Page.of(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest));
+        Page<Picture> page = pictureService.page(Page.of(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest, request));
         return ResultUtils.success(page);
     }
 
@@ -255,7 +235,7 @@ public class PictureController {
         if (pageSize > 20) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest));
+        Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest,request));
         Page<PictureVO> pictureVOPage = pictureService.getPictureVoList(picturePage, request);
         return ResultUtils.success(pictureVOPage);
     }
@@ -268,6 +248,7 @@ public class PictureController {
      * @return 所有数据
      */
     @PostMapping("list/page/vo/cache")
+    @Deprecated
     public BaseResponse<Page<PictureVO>> listPicturePageVOCache(@RequestBody PictureQueryRequest pictureQueryRequest, HttpServletRequest request) {
         int pageSize = pictureQueryRequest.getPageSize();
         // 限制爬虫

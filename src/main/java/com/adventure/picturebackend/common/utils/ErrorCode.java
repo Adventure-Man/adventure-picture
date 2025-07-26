@@ -18,6 +18,7 @@ public enum ErrorCode {
     SERVER_NOT_FOUND(50002,"server_not_found","服务器未找到!"),
     OPERATION_ERROR(50003, "operation_error", "操作失败!"),
     NOT_FOUND_ERROR(50004, "not_found_error", "数据不存在!"),
+    NO_AUTH_ERROR(50010,"no_auth_error","无创建空间权限!"),
     NETWORK_AUTH_ERROR(50011,"Network Authentication Required","网络请求错误,请重试!"),
     ;
 

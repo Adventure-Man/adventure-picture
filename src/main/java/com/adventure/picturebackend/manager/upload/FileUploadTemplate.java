@@ -79,7 +79,7 @@ public abstract class FileUploadTemplate {
                 }
                 // 获取缩略图
 //                CIObject thumbnailCiobject = objectList.get(1);
-                return getUploadPictureResult(uploadPath, compressedCiobject, thumbnailCiobject);
+                return getUploadPictureResult(uploadPath, compressedCiobject,fileName, thumbnailCiobject);
             }
             // 3.封装图片返回信息
             return getUploadPictureResult(uploadPath, imageInfo, fileName, file);
@@ -93,19 +93,18 @@ public abstract class FileUploadTemplate {
 
     }
 
-    private UploadPictureResult getUploadPictureResult(String originFileName, CIObject compressedCiobject, CIObject thumbnailCiobject) {
+    private UploadPictureResult getUploadPictureResult(String originFileName, CIObject compressedCiobject,String fileName, CIObject thumbnailCiobject) {
         UploadPictureResult uploadPictureResult = new UploadPictureResult();
         Integer width = compressedCiobject.getWidth();
         Integer height = compressedCiobject.getHeight();
         long size = compressedCiobject.getSize().longValue();
         String format = compressedCiobject.getFormat();
-        // 图片地址
-        uploadPictureResult.setUrl(cosClientConfig.getHost() + compressedCiobject.getKey());
+        // 压缩图片地址 .webp
+        uploadPictureResult.setUrl(cosClientConfig.getHost() +"/"+ compressedCiobject.getKey());
         // 设置缩略图
-//        uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() +"/"+ thumbnailCiobject.getKey());
-        uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + thumbnailCiobject.getKey());
+        uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() +"/"+ thumbnailCiobject.getKey());
         // 图片名称
-        uploadPictureResult.setPicName(FileUtil.mainName(originFileName));
+        uploadPictureResult.setPicName(FileUtil.mainName(fileName));
         uploadPictureResult.setPicSize(size);
         uploadPictureResult.setPicWidth(width);
         uploadPictureResult.setPicHeight(height);
