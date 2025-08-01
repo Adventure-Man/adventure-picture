@@ -96,7 +96,5 @@ public class SpaceQueryRequest {
         space.setEditTime(spaceQueryRequest.getEditTime());
         space.setUpdateTime(spaceQueryRequest.getUpdateTime());
         return space;
-
     }
-
 }

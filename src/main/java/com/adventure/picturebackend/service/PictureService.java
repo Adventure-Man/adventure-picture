@@ -1,5 +1,6 @@
 package com.adventure.picturebackend.service;
 
+import com.adventure.picturebackend.api.aliyun.CreateOutPaintingTaskResponse;
 import com.adventure.picturebackend.model.dto.picture.*;
 import com.adventure.picturebackend.model.entity.Picture;
 import com.adventure.picturebackend.model.entity.User;
@@ -12,6 +13,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * 图片 服务层。
@@ -140,4 +142,31 @@ public interface PictureService extends IService<Picture> {
      * @return
      */
     boolean editPicture(PictureEditRequest pictureEditRequest, User loginUser);
+
+    /**
+     * 用户-搜索图片
+     *
+     * @param spaceId   空表示所有空间
+     * @param picColor  颜色
+     * @param loginUser 用户
+     * @return
+     */
+    List<PictureVO> searchPictureByColor(Long spaceId, String picColor, User loginUser);
+
+    /**
+     * 批量修改图片
+     *
+     * @param pictureEditByBatchRequest
+     * @param loginUser
+     */
+    void editPictureByBatch(PictureEditByBatchRequest pictureEditByBatchRequest, User loginUser);
+
+    /**
+     * 创建图片扩图任务
+     *
+     * @param createPictureOutPaintingTaskRequest
+     * @param loginUser
+     * @return
+     */
+    CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser);
 }

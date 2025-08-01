@@ -36,4 +36,12 @@ public interface SpaceService extends IService<Space> {
      * 返回空间信息
      */
     List<SpaceLevelVO> getSpaceLevels();
+
+    /**
+     * 校验空间权限
+     *
+     * @param space
+     * @param
+     */
+    void checkSpaceAuth(User loginUser, Space space);
 }

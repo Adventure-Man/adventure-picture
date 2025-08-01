@@ -41,6 +41,11 @@ public class PictureUpdateRequest implements Serializable {
      */
     private Long spaceId;
 
+    /**
+     * 图片主色调
+     */
+    private String picColor;
+
 
     public static Picture dtoToObj(PictureUpdateRequest pictureUpdateRequest) {
         if (pictureUpdateRequest == null) {

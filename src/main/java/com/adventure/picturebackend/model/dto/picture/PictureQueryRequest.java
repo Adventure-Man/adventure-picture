@@ -12,7 +12,6 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class PictureQueryRequest extends PageRequest implements Serializable {
-
     /**
      * id
      */
@@ -103,6 +102,15 @@ public class PictureQueryRequest extends PageRequest implements Serializable {
      */
     private boolean nullSpaceId;
 
+    /**
+     * 开始编辑时间
+     */
+    private LocalDateTime startEditTime;
+
+    /**
+     * 结束编辑时间
+     */
+    private LocalDateTime endEditTime;
 
     private static final long serialVersionUID = 1L;
 }

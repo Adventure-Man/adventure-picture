@@ -79,7 +79,7 @@ public abstract class FileUploadTemplate {
                 }
                 // 获取缩略图
 //                CIObject thumbnailCiobject = objectList.get(1);
-                return getUploadPictureResult(uploadPath, compressedCiobject,fileName, thumbnailCiobject);
+                return getUploadPictureResult(uploadPath, compressedCiobject, fileName, thumbnailCiobject, imageInfo);
             }
             // 3.封装图片返回信息
             return getUploadPictureResult(uploadPath, imageInfo, fileName, file);
@@ -93,7 +93,7 @@ public abstract class FileUploadTemplate {
 
     }
 
-    private UploadPictureResult getUploadPictureResult(String originFileName, CIObject compressedCiobject,String fileName, CIObject thumbnailCiobject) {
+    private UploadPictureResult getUploadPictureResult(String originFileName, CIObject compressedCiobject, String fileName, CIObject thumbnailCiobject, ImageInfo imageInfo) {
         UploadPictureResult uploadPictureResult = new UploadPictureResult();
         Integer width = compressedCiobject.getWidth();
         Integer height = compressedCiobject.getHeight();
@@ -111,6 +111,8 @@ public abstract class FileUploadTemplate {
         uploadPictureResult.setPicFormat(format);
         // 宽高比
         uploadPictureResult.setPicScale(Math.round(height * 1.0 / width * 100) / 100.0);
+        // 颜色
+        uploadPictureResult.setPicColor(imageInfo.getAve());
         return uploadPictureResult;
     }
 
@@ -127,6 +129,8 @@ public abstract class FileUploadTemplate {
         uploadPictureResult.setPicFormat(imageInfo.getFormat());
         // 宽高比
         uploadPictureResult.setPicScale(Math.round(height * 1.0 / width * 100) / 100.0);
+        // 颜色
+        uploadPictureResult.setPicColor(imageInfo.getAve());
         return uploadPictureResult;
     }
 

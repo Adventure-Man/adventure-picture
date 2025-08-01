@@ -76,17 +76,6 @@ public class SpaceController {
     }
 
     /**
-     * 根据主键删除。
-     *
-     * @param id 主键
-     * @return {@code true} 删除成功，{@code false} 删除失败
-     */
-    @DeleteMapping("remove/{id}")
-    public boolean remove(@PathVariable Long id) {
-        return spaceService.removeById(id);
-    }
-
-    /**
      * 根据主键更新空间。
      *
      * @param spaceUpdateRequest
