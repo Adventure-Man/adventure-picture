@@ -1,12 +1,16 @@
 package com.adventure.picturebackend.service;
 
-import com.adventure.picturebackend.model.dto.picture.SpaceAddRequest;
-import com.adventure.picturebackend.model.dto.picture.SpaceUpdateRequest;
-import com.adventure.picturebackend.model.entity.Picture;
+import com.adventure.picturebackend.model.dto.sapce.SpaceAddRequest;
+import com.adventure.picturebackend.model.dto.sapce.SpaceQueryRequest;
+import com.adventure.picturebackend.model.dto.sapce.SpaceUpdateRequest;
 import com.adventure.picturebackend.model.entity.Space;
 import com.adventure.picturebackend.model.entity.User;
-import com.adventure.picturebackend.model.vo.SpaceLevelVO;
+import com.adventure.picturebackend.model.vo.space.SpaceLevelVO;
+import com.adventure.picturebackend.model.vo.space.SpaceVO;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
@@ -44,4 +48,31 @@ public interface SpaceService extends IService<Space> {
      * @param
      */
     void checkSpaceAuth(User loginUser, Space space);
+
+    /**
+     * 获取查询条件
+     *
+     * @param spaceQueryRequest
+     * @param request
+     * @return
+     */
+    QueryWrapper getQueryWrapper(SpaceQueryRequest spaceQueryRequest, HttpServletRequest request);
+
+    /**
+     * 获取空间信息VO
+     *
+     * @param space
+     * @param request
+     * @return
+     */
+    SpaceVO getSpaceVO(Space space, HttpServletRequest request);
+
+    /**
+     * 获取空间信息VO列表
+     *
+     * @param spacePage
+     * @param request
+     * @return
+     */
+    Page<SpaceVO> getSpaceVoList(Page<Space> spacePage, HttpServletRequest request);
 }

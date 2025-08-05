@@ -5,7 +5,7 @@ import com.adventure.picturebackend.common.exception.BusinessException;
 import com.adventure.picturebackend.common.req.SpaceAnalyzeRequest;
 import com.adventure.picturebackend.common.utils.ErrorCode;
 import com.adventure.picturebackend.common.utils.ThrowUtils;
-import com.adventure.picturebackend.model.dto.sapce.*;
+import com.adventure.picturebackend.model.dto.sapce.analyze.*;
 import com.adventure.picturebackend.model.entity.Picture;
 import com.adventure.picturebackend.model.entity.Space;
 import com.adventure.picturebackend.model.entity.User;

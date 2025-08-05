@@ -1,6 +1,6 @@
 package com.adventure.picturebackend.service;
 
-import com.adventure.picturebackend.model.dto.sapce.*;
+import com.adventure.picturebackend.model.dto.sapce.analyze.*;
 import com.adventure.picturebackend.model.entity.Space;
 import com.adventure.picturebackend.model.entity.User;
 import com.adventure.picturebackend.model.vo.space.analyze.*;

@@ -28,7 +28,7 @@ public class Codegen {
         globalConfig.setBasePackage("generated");
         //设置表前缀和只生成哪些表
         // globalConfig.setTablePrefix("tz_");
-        globalConfig.setGenerateTable("space");
+        globalConfig.setGenerateTable("space_user");
         //设置生成 entity 并启用 Lombok
         globalConfig.setEntityGenerateEnable(true);
         globalConfig.setEntityWithLombok(true);
@@ -36,10 +36,10 @@ public class Codegen {
         globalConfig.setEntityJdkVersion(17);
 
         //设置生成 mapper
-//        globalConfig.setMapperGenerateEnable(true);
-//        globalConfig.setServiceGenerateEnable(true);
-//        globalConfig.setServiceImplGenerateEnable(true);
-//        globalConfig.setControllerGenerateEnable(true);
+        globalConfig.setMapperGenerateEnable(true);
+        globalConfig.setServiceGenerateEnable(true);
+        globalConfig.setServiceImplGenerateEnable(true);
+        globalConfig.setControllerGenerateEnable(true);
         //可以单独配置某个列
 //        ColumnConfig columnConfig = new ColumnConfig();
 //        columnConfig.setColumnName("tenant_id");

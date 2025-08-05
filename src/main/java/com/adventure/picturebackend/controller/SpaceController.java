@@ -9,27 +9,25 @@ import com.adventure.picturebackend.common.utils.IpHelper;
 import com.adventure.picturebackend.common.utils.ResultUtils;
 import com.adventure.picturebackend.common.utils.ThrowUtils;
 import com.adventure.picturebackend.config.SpaceCapacityConfig;
-import com.adventure.picturebackend.model.dto.picture.SpaceAddRequest;
-import com.adventure.picturebackend.model.dto.picture.SpaceUpdateRequest;
+import com.adventure.picturebackend.model.dto.sapce.SpaceAddRequest;
+import com.adventure.picturebackend.model.dto.sapce.SpaceQueryRequest;
+import com.adventure.picturebackend.model.dto.sapce.SpaceUpdateRequest;
+import com.adventure.picturebackend.model.entity.Space;
 import com.adventure.picturebackend.model.entity.User;
-import com.adventure.picturebackend.model.enums.SpaceLevelEnum;
-import com.adventure.picturebackend.model.vo.SpaceLevelVO;
+import com.adventure.picturebackend.model.vo.space.SpaceLevelVO;
+import com.adventure.picturebackend.model.vo.space.SpaceVO;
 import com.adventure.picturebackend.service.SpaceService;
 import com.adventure.picturebackend.service.UserService;
 import com.mybatisflex.core.paginate.Page;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.adventure.picturebackend.model.entity.Space;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -89,5 +87,26 @@ public class SpaceController {
         }
         Boolean b = spaceService.updateSpace(spaceUpdateRequest);
         return ResultUtils.success(b);
+    }
+
+    /**
+     * 分页获取空间列表。
+     *
+     * @param spaceQueryRequest
+     * @return 空间列表
+     */
+    @PostMapping("list/page")
+    public BaseResponse<Page<SpaceVO>> listSpacePage(@RequestBody SpaceQueryRequest spaceQueryRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(spaceQueryRequest == null, ErrorCode.PARAMS_ERROR);
+        int current = spaceQueryRequest.getCurrent();
+        int pageSize = spaceQueryRequest.getPageSize();
+        // 限制爬虫
+        if (pageSize > 20) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        Page<Space> picturePage = spaceService.page(new Page<>(current, pageSize), spaceService.getQueryWrapper(spaceQueryRequest, request));
+        Page<SpaceVO> spaceVOPage = spaceService.getSpaceVoList(picturePage, request);
+        return ResultUtils.success(spaceVOPage);
+
     }
 }
