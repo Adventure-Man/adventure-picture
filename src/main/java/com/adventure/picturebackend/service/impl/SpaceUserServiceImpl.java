@@ -2,8 +2,8 @@ package com.adventure.picturebackend.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.adventure.picturebackend.common.exception.BusinessException;
-import com.adventure.picturebackend.common.utils.ErrorCode;
-import com.adventure.picturebackend.common.utils.ThrowUtils;
+import com.adventure.picturebackend.common.exception.ErrorCode;
+import com.adventure.picturebackend.common.exception.ThrowUtils;
 import com.adventure.picturebackend.model.dto.spaceuser.SpaceUserAddRequest;
 import com.adventure.picturebackend.model.dto.spaceuser.SpaceUserEditRequest;
 import com.adventure.picturebackend.model.dto.spaceuser.SpaceUserQueryRequest;
@@ -21,6 +21,7 @@ import com.adventure.picturebackend.mapper.SpaceUserMapper;
 import com.adventure.picturebackend.service.SpaceUserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -39,6 +40,7 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
     @Autowired
     private UserService userService;
     @Autowired
+    @Lazy
     private SpaceService spaceService;
 
     @Override
@@ -47,22 +49,33 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
         Long id = spaceUserEditRequest.getId();
         String spaceRole = spaceUserEditRequest.getSpaceRole();
         ThrowUtils.throwIf(spaceRole == null, ErrorCode.PARAMS_ERROR);
+        // 获取空间用户信息
         SpaceUser oldSpaceUser = this.getById(id);
         ThrowUtils.throwIf(oldSpaceUser == null, ErrorCode.NOT_FOUND_ERROR);
+        // 判断空间角色是否一致，如果一致则不需要更新
+        if (spaceRole.equals(oldSpaceUser.getSpaceRole())) {
+            return true;
+        }
         SpaceUser spaceUser = SpaceUser.builder().id(id).spaceRole(spaceRole).build();
         this.checkSpaceUserAuth(false, spaceUser);
         return this.updateById(spaceUser);
     }
 
     @Override
-    public Long saveSpaceUser(SpaceUserAddRequest spaceUserAddRequest) {
+    public Long saveSpaceUser(SpaceUserAddRequest spaceUserAddRequest, HttpServletRequest request) {
         // 参数校验
         if (spaceUserAddRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         // 1.校验空间和用户是否存在
         // 2.校验用户是否已经在该空间内
-        SpaceUser spaceUser = SpaceUser.builder().spaceId(spaceUserAddRequest.getSpaceId()).userId(spaceUserAddRequest.getUserId()).spaceRole(spaceUserAddRequest.getSpaceRole()).build();
+        User loginUser = userService.getLoginUser(request);
+        SpaceUser spaceUser = SpaceUser.builder()
+                .spaceId(spaceUserAddRequest.getSpaceId())
+                .userId(spaceUserAddRequest.getUserId())
+                .spaceRole(spaceUserAddRequest.getSpaceRole())
+                .createUser(loginUser.getId())
+                .build();
         this.checkSpaceUserAuth(true, spaceUser);
         boolean save = this.save(spaceUser);
         if (!save) {
@@ -83,11 +96,11 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
             User byId = userService.getById(spaceUser.getUserId());
             ThrowUtils.throwIf(byId == null, ErrorCode.NOT_FOUND_ERROR, "用户不存在");
         }
-
-        // 2.判断用户是否是空间管理员
-        if (!SpaceRoleEnum.ADMIN.equals(spaceRoleEnum)) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+        // 2. 校验空间角色
+        if (spaceRole != null && spaceRoleEnum ==  null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "空间角色参数错误");
         }
+
     }
 
     @Override
@@ -97,7 +110,7 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
         Long spaceId = spaceUserQueryRequest.getSpaceId();
         Long userId = spaceUserQueryRequest.getUserId();
         String spaceRole = spaceUserQueryRequest.getSpaceRole();
-        ThrowUtils.throwIf(ObjectUtil.hasEmpty(spaceId, userId, spaceRole), ErrorCode.PARAMS_ERROR);
+//        ThrowUtils.throwIf(ObjectUtil.hasEmpty(spaceId, userId, spaceRole), ErrorCode.PARAMS_ERROR);
         QueryWrapper queryWrapper = new QueryWrapper();
         queryWrapper.eq(SpaceUser::getId, id, ObjectUtil.isNotEmpty(id));
         queryWrapper.eq(SpaceUser::getSpaceId, spaceId, ObjectUtil.isNotEmpty(spaceId));

@@ -55,6 +55,12 @@ public class SpaceUser implements Serializable {
     private String spaceRole;
 
     /**
+     * 创建人
+     */
+    @Column("createUser")
+    private Long createUser;
+
+    /**
      * 创建时间
      */
     @Column("createTime")

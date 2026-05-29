@@ -4,21 +4,20 @@ import cn.hutool.core.util.ObjectUtil;
 import com.adventure.picturebackend.common.exception.BusinessException;
 import com.adventure.picturebackend.common.req.DeleteRequest;
 import com.adventure.picturebackend.common.resp.BaseResponse;
-import com.adventure.picturebackend.common.utils.ErrorCode;
+import com.adventure.picturebackend.common.exception.ErrorCode;
 import com.adventure.picturebackend.common.utils.ResultUtils;
-import com.adventure.picturebackend.common.utils.ThrowUtils;
+import com.adventure.picturebackend.common.exception.ThrowUtils;
+import com.adventure.picturebackend.manager.auth.SpaceUserPermissionConstant;
+import com.adventure.picturebackend.manager.auth.anno.SaSpaceCheckPermission;
 import com.adventure.picturebackend.model.dto.spaceuser.SpaceUserAddRequest;
 import com.adventure.picturebackend.model.dto.spaceuser.SpaceUserEditRequest;
 import com.adventure.picturebackend.model.dto.spaceuser.SpaceUserQueryRequest;
 import com.adventure.picturebackend.model.entity.User;
 import com.adventure.picturebackend.model.vo.spaceuser.SpaceUserVO;
 import com.adventure.picturebackend.service.UserService;
-import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -52,8 +51,9 @@ public class SpaceUserController {
      * @return {@code true} 添加成功，{@code false} 添加失败
      */
     @PostMapping("/save")
-    public BaseResponse<Long> save(@RequestBody SpaceUserAddRequest spaceUserAddRequest) {
-        return ResultUtils.success(spaceUserService.saveSpaceUser(spaceUserAddRequest));
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
+    public BaseResponse<Long> save(@RequestBody SpaceUserAddRequest spaceUserAddRequest, HttpServletRequest request) {
+        return ResultUtils.success(spaceUserService.saveSpaceUser(spaceUserAddRequest, request));
     }
 
     /**
@@ -63,6 +63,7 @@ public class SpaceUserController {
      * @return {@code true} 删除成功，{@code false} 删除失败
      */
     @PostMapping("/delete")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<Boolean> remove(@RequestBody DeleteRequest deleteRequest) {
         if (deleteRequest == null || deleteRequest.getId() <= 0){
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -85,6 +86,7 @@ public class SpaceUserController {
      * @return {@code true} 更新成功，{@code false} 更新失败
      */
     @PutMapping("/update")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<Boolean> update(@RequestBody SpaceUserEditRequest spaceUserEditRequest) {
         ThrowUtils.throwIf(spaceUserEditRequest == null || spaceUserEditRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
         return ResultUtils.success(spaceUserService.updateSpaceUser(spaceUserEditRequest));
@@ -96,6 +98,7 @@ public class SpaceUserController {
      * @return 所有数据
      */
     @GetMapping("/list")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<List<SpaceUserVO>> list(@RequestBody SpaceUserQueryRequest spaceUserQueryRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(spaceUserQueryRequest == null, ErrorCode.PARAMS_ERROR);
         List<SpaceUser> list = spaceUserService.list(spaceUserService.getQueryWrapper(spaceUserQueryRequest));
@@ -109,20 +112,21 @@ public class SpaceUserController {
      * @return 空间用户关联详情
      */
     @PostMapping("/get")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<SpaceUser> getInfo(@RequestBody SpaceUserQueryRequest spaceUserQueryRequest) {
-        ThrowUtils.throwIf(spaceUserQueryRequest == null || spaceUserQueryRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
-        Long id = spaceUserQueryRequest.getId();
+        ThrowUtils.throwIf(spaceUserQueryRequest == null, ErrorCode.PARAMS_ERROR);
         Long spaceId = spaceUserQueryRequest.getSpaceId();
         Long userId = spaceUserQueryRequest.getUserId();
         String spaceRole = spaceUserQueryRequest.getSpaceRole();
-        ThrowUtils.throwIf(ObjectUtil.hasEmpty(spaceId,userId,spaceRole), ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(ObjectUtil.hasEmpty(spaceId,userId), ErrorCode.PARAMS_ERROR);
         QueryWrapper queryWrapper = spaceUserService.getQueryWrapper(spaceUserQueryRequest);
         SpaceUser one = spaceUserService.getOne(queryWrapper);
+        ThrowUtils.throwIf(one == null, ErrorCode.NOT_FOUND_ERROR);
         return ResultUtils.success(one);
     }
 
     /**
-     * 获取用户的团队空间
+     * 获取用户的团队空间 一个用户可加入多个团队空间
      * @param request
      * @return
      */

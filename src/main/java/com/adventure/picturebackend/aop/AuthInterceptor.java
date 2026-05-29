@@ -1,7 +1,8 @@
 package com.adventure.picturebackend.aop;
 
+import cn.hutool.core.date.StopWatch;
 import com.adventure.picturebackend.aop.annotation.AuthCheck;
-import com.adventure.picturebackend.common.utils.ErrorCode;
+import com.adventure.picturebackend.common.exception.ErrorCode;
 import com.adventure.picturebackend.common.exception.BusinessException;
 import com.adventure.picturebackend.model.entity.User;
 import com.adventure.picturebackend.model.enums.UserRoleEnum;
@@ -11,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -29,8 +31,14 @@ public class AuthInterceptor {
     @Autowired
     private UserService userService;
 
+    // 定义切点
+    @Pointcut("@annotation(com.adventure.picturebackend.aop.annotation.AuthCheck)")
+    public void authCheckPointcut() {
+    }
+
     // 定义环绕通知
-    @Around("@annotation(com.adventure.picturebackend.aop.annotation.AuthCheck)")
+    @Around("authCheckPointcut()")
+//    @Around("@annotation(com.adventure.picturebackend.aop.annotation.AuthCheck)")
     public Object doInterceptor(ProceedingJoinPoint joinPoint) throws Throwable {
         AuthCheck authCheck = ((MethodSignature)joinPoint.getSignature()).getMethod().getAnnotation(AuthCheck.class);
         RequestAttributes requestAttributes = RequestContextHolder.currentRequestAttributes();
@@ -39,6 +47,7 @@ public class AuthInterceptor {
         this.check(authCheck, request);
         return joinPoint.proceed();
     }
+
     private void check(AuthCheck authCheck, HttpServletRequest request) {
         if (authCheck == null) {
             return;

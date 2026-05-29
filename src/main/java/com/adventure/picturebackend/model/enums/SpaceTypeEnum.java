@@ -1,7 +1,9 @@
 package com.adventure.picturebackend.model.enums;
 
 import cn.hutool.core.util.ObjUtil;
+import com.mybatisflex.annotation.EnumValue;
 import lombok.Getter;
+import lombok.Value;
 
 @Getter
 public enum SpaceTypeEnum {
@@ -11,6 +13,8 @@ public enum SpaceTypeEnum {
 
     private final String text;
 
+    // 枚举值
+    @EnumValue
     private final int value;
 
     SpaceTypeEnum(String text, int value) {

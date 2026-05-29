@@ -37,7 +37,7 @@ public interface SpaceUserService extends IService<SpaceUser> {
      * @param spaceUserAddRequest
      * @return
      */
-    Long saveSpaceUser(SpaceUserAddRequest spaceUserAddRequest);
+    Long saveSpaceUser(SpaceUserAddRequest spaceUserAddRequest, HttpServletRequest request);
 
     /**
      * 校验空间用户权限

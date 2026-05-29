@@ -4,8 +4,6 @@ import com.adventure.picturebackend.model.entity.SpaceUser;
 import com.adventure.picturebackend.model.vo.UserVO;
 import com.adventure.picturebackend.model.vo.space.SpaceVO;
 import com.mybatisflex.annotation.Column;
-import com.mybatisflex.annotation.Id;
-import com.mybatisflex.annotation.KeyType;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
 
@@ -37,6 +35,11 @@ public class SpaceUserVO {
      * 空间角色：viewer/editor/admin
      */
     private String spaceRole;
+
+    /**
+     * 创建人
+     */
+    private Long createUser;
 
     /**
      * 创建时间

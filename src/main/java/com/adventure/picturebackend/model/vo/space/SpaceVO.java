@@ -1,12 +1,17 @@
 package com.adventure.picturebackend.model.vo.space;
 
 import com.adventure.picturebackend.model.entity.Space;
+import com.adventure.picturebackend.model.enums.SpaceTypeEnum;
 import com.adventure.picturebackend.model.vo.UserVO;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Data
 public class SpaceVO implements Serializable {
@@ -53,22 +58,37 @@ public class SpaceVO implements Serializable {
     /**
      * 创建时间
      */
-    private Date createTime;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private LocalDateTime createTime;
 
     /**
      * 编辑时间
      */
-    private Date editTime;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private LocalDateTime editTime;
 
     /**
      * 更新时间
      */
-    private Date updateTime;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private LocalDateTime updateTime;
+
+
+    /**
+     * 空间类型：0-个人空间 1-团队空间
+     */
+    private SpaceTypeEnum spaceType;
 
     /**
      * 创建用户信息
      */
     private UserVO user;
+
+    /**
+     * 权限列表
+     */
+    private List<String> permissionList = new ArrayList<>();
+
 
     private static final long serialVersionUID = 1L;
 
@@ -99,6 +119,8 @@ public class SpaceVO implements Serializable {
         }
         SpaceVO spaceVO = new SpaceVO();
         BeanUtils.copyProperties(space, spaceVO);
+        Integer value = space.getSpaceLevel().getValue();
+        spaceVO.setSpaceLevel(value);
         return spaceVO;
     }
 }

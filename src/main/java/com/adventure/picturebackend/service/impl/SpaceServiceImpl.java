@@ -3,8 +3,8 @@ package com.adventure.picturebackend.service.impl;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.adventure.picturebackend.common.exception.BusinessException;
-import com.adventure.picturebackend.common.utils.ErrorCode;
-import com.adventure.picturebackend.common.utils.ThrowUtils;
+import com.adventure.picturebackend.common.exception.ErrorCode;
+import com.adventure.picturebackend.common.exception.ThrowUtils;
 import com.adventure.picturebackend.config.SpaceCapacityConfig;
 import com.adventure.picturebackend.model.dto.sapce.SpaceAddRequest;
 import com.adventure.picturebackend.model.dto.sapce.SpaceQueryRequest;
@@ -67,7 +67,9 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space> implements
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         // 业务逻辑
-        Space spaceBuilder = Space.builder().id(spaceUpdateRequest.getId()).spaceName(spaceUpdateRequest.getSpaceName()).spaceLevel(SpaceLevelEnum.getEnumByValue(spaceUpdateRequest.getSpaceLevel())).maxSize(spaceUpdateRequest.getMaxSize()).maxCount(spaceUpdateRequest.getMaxCount()).build();
+        Space spaceBuilder = Space.builder().id(spaceUpdateRequest.getId())
+                .spaceName(spaceUpdateRequest.getSpaceName())
+                .spaceLevel(SpaceLevelEnum.getEnumByValue(spaceUpdateRequest.getSpaceLevel())).maxSize(spaceUpdateRequest.getMaxSize()).maxCount(spaceUpdateRequest.getMaxCount()).build();
         // 填充空间信息
         fillSpaceBySpaceLevel(spaceBuilder);
         // 数据校验
@@ -89,7 +91,11 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space> implements
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         // 业务逻辑
-        Space spaceBuilder = Space.builder().spaceName(spaceAddRequest.getSpaceName()).spaceLevel(SpaceLevelEnum.getEnumByValue(spaceAddRequest.getSpaceLevel())).spaceType(spaceAddRequest.getSpaceType()).build();
+        Space spaceBuilder = Space.builder()
+                .spaceName(spaceAddRequest.getSpaceName())
+                .spaceLevel(SpaceLevelEnum.getEnumByValue(spaceAddRequest.getSpaceLevel()))
+                .spaceType(SpaceTypeEnum.getEnumByValue(spaceAddRequest.getSpaceType()))
+                .build();
         if (spaceAddRequest.getSpaceName().isBlank()) {
             spaceBuilder.setSpaceName("默认空间");
         }
@@ -97,7 +103,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space> implements
             spaceBuilder.setSpaceLevel(SpaceLevelEnum.ORDINARY);
         }
         if (spaceBuilder.getSpaceType() == null) {
-            spaceBuilder.setSpaceType(SpaceTypeEnum.PRIVATE.getValue());
+            spaceBuilder.setSpaceType(SpaceTypeEnum.PRIVATE);
         }
         // 填充空间信息
         fillSpaceBySpaceLevel(spaceBuilder);
@@ -114,17 +120,20 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space> implements
             try {
                 // 数据库操作
                 Long newSpaceId = transactionTemplate.execute(status -> {
-                    long count = this.count(new QueryWrapper().eq(Space::getUserId, userId).eq(Space::getSpaceType, spaceAddRequest.getSpaceType()));
+                    long count = this.count(new QueryWrapper()
+                            .eq(Space::getUserId, userId)
+                            .eq(Space::getSpaceType, spaceAddRequest.getSpaceType()));
                     ThrowUtils.throwIf(count >= 1, ErrorCode.OPERATION_ERROR, "每个用户仅能创建一个私有空间或团队空间");
                     // 写入数据库
                     boolean result = this.save(spaceBuilder);
                     ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
                     // 如果空间类型是团队空间，添加空间用户
-                    if (spaceBuilder.getSpaceType().equals(SpaceTypeEnum.TEAM.getValue())) {
+                    if (spaceBuilder.getSpaceType().equals(SpaceTypeEnum.TEAM)) {
                         SpaceUser spaceUser = new SpaceUser();
                         spaceUser.setSpaceId(spaceBuilder.getId());
                         spaceUser.setUserId(userId);
                         spaceUser.setSpaceRole(SpaceRoleEnum.ADMIN.getValue());
+                        spaceUser.setCreateUser(userId);
                         boolean save = spaceUserService.save(spaceUser);
                         ThrowUtils.throwIf(!save, ErrorCode.OPERATION_ERROR);
                     }
@@ -185,8 +194,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space> implements
         Integer spaceLevel = spaceBuilder.getSpaceLevel().getValue();
         String spaceName = spaceBuilder.getSpaceName();
         Long spaceId = spaceBuilder.getId();
-        Integer spaceType = spaceBuilder.getSpaceType();
-        SpaceTypeEnum spaceTypeEnum = SpaceTypeEnum.getEnumByValue(spaceType);
+        SpaceTypeEnum spaceTypeEnum = spaceBuilder.getSpaceType();
         ThrowUtils.throwIf(spaceLevel == null, ErrorCode.PARAMS_ERROR, "空间等级不能为空");
         ThrowUtils.throwIf(StrUtil.isBlank(spaceName), ErrorCode.PARAMS_ERROR, "空间名称不能为空");
         // 添加时，参数不能为空
@@ -200,7 +208,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space> implements
             ThrowUtils.throwIf(spaceName.length() > 20, ErrorCode.PARAMS_ERROR, "空间名称过长");
             ThrowUtils.throwIf(spaceLevel < 0 || spaceLevel > 3, ErrorCode.PARAMS_ERROR, "空间等级错误");
             ThrowUtils.throwIf(spaceId == null, ErrorCode.PARAMS_ERROR, "空间id不能为空");
-            ThrowUtils.throwIf(spaceTypeEnum == null, ErrorCode.PARAMS_ERROR, "空间类型不存在");
+//            ThrowUtils.throwIf(spaceTypeEnum == null, ErrorCode.PARAMS_ERROR, "空间类型不存在");
         }
     }
 
@@ -306,7 +314,9 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space> implements
         }
         Set<Long> collect = records.stream().map(Space::getUserId).collect(Collectors.toSet());
         List<User> users = userService.listByIds(collect);
-        Map<Long, UserVO> userVOMap = users.stream().map(user -> userService.getUserVO(user)).collect(Collectors.toMap(UserVO::getId, userVO -> userVO));
+        Map<Long, UserVO> userVOMap = users.stream()
+                .map(user -> userService.getUserVO(user))
+                .collect(Collectors.toMap(UserVO::getId, userVO -> userVO));
         List<SpaceVO> pictureVOList = records.stream().map(space -> {
             SpaceVO pictureVO = SpaceVO.objToVo(space);
             Long userId = space.getUserId();
