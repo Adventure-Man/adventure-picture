@@ -2,9 +2,9 @@ package com.adventure.picturebackend.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.adventure.picturebackend.common.utils.ErrorCode;
+import com.adventure.picturebackend.common.exception.ErrorCode;
 import com.adventure.picturebackend.common.exception.BusinessException;
-import com.adventure.picturebackend.manager.StpKits;
+import com.adventure.picturebackend.manager.auth.StpKits;
 import com.adventure.picturebackend.mapper.UserMapper;
 import com.adventure.picturebackend.model.dto.user.UserQueryRequest;
 import com.adventure.picturebackend.model.entity.User;
@@ -43,9 +43,9 @@ public class UserServiceImpl extends CacheableServiceImpl<UserMapper, User> impl
     public boolean userLogout(HttpServletRequest request) {
         // 先判断是否已登录
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        if (userObj == null) {
-            userObj = StpKits.SPACE.getTokenSession().get(USER_LOGIN_STATE);
-        }
+//        if (userObj == null) {
+//            userObj = StpKits.SPACE.getTokenSession().get(USER_LOGIN_STATE);
+//        }
         if (userObj == null) {
             throw new BusinessException(ErrorCode.LOGIN_AUTH_ERROR, "未登录");
         }
@@ -74,9 +74,13 @@ public class UserServiceImpl extends CacheableServiceImpl<UserMapper, User> impl
     public User getLoginUser(HttpServletRequest request) {
         // 先判断是否已登录
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        if (userObj == null) {
-            userObj = StpKits.SPACE.getTokenSession().get(USER_LOGIN_STATE);
-        }
+//        if (userObj == null) {
+//            userObj = StpKits.SPACE.getTokenSession().get(USER_LOGIN_STATE);
+//        }
+
+        // 获取当前登录用户
+//        StpKits.SPACE.checkLogin();
+//        Object userObj = StpKits.SPACE.getTokenSession().get(USER_LOGIN_STATE);
         User currentUser = (User) userObj;
         if (currentUser == null || currentUser.getId() == null) {
             throw new BusinessException(ErrorCode.LOGIN_AUTH_ERROR);
@@ -119,7 +123,8 @@ public class UserServiceImpl extends CacheableServiceImpl<UserMapper, User> impl
         request.getSession().setAttribute(USER_LOGIN_STATE, user);
 
         // 先踢出之前所有登录设备 清除用户之前的所有 Token 和 Session：
-        StpKits.SPACE.logoutByTokenValue(StpKits.SPACE.getTokenValue());
+        StpKits.SPACE.logout(user.getId());
+//        StpKits.SPACE.logoutByTokenValue(StpKits.SPACE.getTokenValue());
         // 记录登录态到Redis中，与springSession过期过期信息一致
         StpKits.SPACE.login(user.getId());
         StpKits.SPACE.getTokenSession().set(USER_LOGIN_STATE, user);

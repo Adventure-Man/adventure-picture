@@ -2,12 +2,12 @@ package com.adventure.picturebackend.controller;
 
 import com.adventure.picturebackend.aop.annotation.AuthCheck;
 import com.adventure.picturebackend.common.constant.UserConstant;
-import com.adventure.picturebackend.common.utils.ErrorCode;
+import com.adventure.picturebackend.common.exception.ErrorCode;
 import com.adventure.picturebackend.common.req.DeleteRequest;
 import com.adventure.picturebackend.common.resp.BaseResponse;
 import com.adventure.picturebackend.common.utils.PageParamUtils;
 import com.adventure.picturebackend.common.utils.ResultUtils;
-import com.adventure.picturebackend.common.utils.ThrowUtils;
+import com.adventure.picturebackend.common.exception.ThrowUtils;
 import com.adventure.picturebackend.common.exception.BusinessException;
 import com.adventure.picturebackend.model.dto.user.*;
 import com.adventure.picturebackend.model.entity.User;
@@ -157,7 +157,7 @@ public class UserController {
     }
 
     /**
-     * 根据 id 获取包装类vo
+     * 根据 id 获取包装类vo（用户）
      */
     @GetMapping("/get/vo")
     public BaseResponse<UserVO> getUserVOById(long id) {
@@ -166,7 +166,7 @@ public class UserController {
         return ResultUtils.success(userService.getUserVO(user));
     }
     /**
-     * 获取当前登录用户脱敏后的信息loginVo
+     * 获取当前登录用户脱敏后的信息login(用户)
      */
     @GetMapping("/get/login")
     public BaseResponse<LoginUserVO> getLoginUser(HttpServletRequest request) {

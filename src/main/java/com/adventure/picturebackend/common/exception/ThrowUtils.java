@@ -1,6 +1,4 @@
-package com.adventure.picturebackend.common.utils;
-
-import com.adventure.picturebackend.common.exception.BusinessException;
+package com.adventure.picturebackend.common.exception;
 
 /**
  * @Author Adventure
