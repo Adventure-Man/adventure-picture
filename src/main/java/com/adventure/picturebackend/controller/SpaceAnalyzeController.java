@@ -1,9 +1,9 @@
 package com.adventure.picturebackend.controller;
 
 import com.adventure.picturebackend.common.resp.BaseResponse;
-import com.adventure.picturebackend.common.utils.ErrorCode;
+import com.adventure.picturebackend.common.exception.ErrorCode;
 import com.adventure.picturebackend.common.utils.ResultUtils;
-import com.adventure.picturebackend.common.utils.ThrowUtils;
+import com.adventure.picturebackend.common.exception.ThrowUtils;
 import com.adventure.picturebackend.model.dto.sapce.analyze.*;
 import com.adventure.picturebackend.model.entity.Space;
 import com.adventure.picturebackend.model.entity.User;

@@ -5,7 +5,6 @@ import cn.dev33.satoken.exception.NotPermissionException;
 import cn.dev33.satoken.exception.NotRoleException;
 import cn.dev33.satoken.exception.SaTokenException;
 import com.adventure.picturebackend.common.resp.BaseResponse;
-import com.adventure.picturebackend.common.utils.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,14 +47,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<BaseResponse<?>> businessExceptionHandler(BusinessException e) {
         log.error("BusinessException：{} - msg:{}", e, e.getMessage());
-        return ResponseEntity.ok(new BaseResponse<>(ErrorCode.SERVER_RESPONSE_ERROR, e.getMessage()));
+        return ResponseEntity.ok(new BaseResponse<>(e.getCode(), e.getMessage()));
     }
 
     // 全局异常拦截,  拦截：其它所有异常
     @ExceptionHandler(Exception.class)
     public ResponseEntity<BaseResponse<?>> handlerException(Exception e) {
         log.info("Exception:{} - msg:{}", e, e.getMessage());
-        return ResponseEntity.ok(new BaseResponse<>(ErrorCode.SERVER_ERROR, "系统异常"));
+        return ResponseEntity.ok(new BaseResponse<>(ErrorCode.SERVER_ERROR, "系统异常222"));
     }
 
     // 请求参数错误

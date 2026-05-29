@@ -4,16 +4,19 @@ import com.adventure.picturebackend.aop.annotation.AuthCheck;
 import com.adventure.picturebackend.common.constant.UserConstant;
 import com.adventure.picturebackend.common.exception.BusinessException;
 import com.adventure.picturebackend.common.resp.BaseResponse;
-import com.adventure.picturebackend.common.utils.ErrorCode;
-import com.adventure.picturebackend.common.utils.IpHelper;
+import com.adventure.picturebackend.common.exception.ErrorCode;
+import com.adventure.picturebackend.common.utils.IpHelperUtils;
 import com.adventure.picturebackend.common.utils.ResultUtils;
-import com.adventure.picturebackend.common.utils.ThrowUtils;
+import com.adventure.picturebackend.common.exception.ThrowUtils;
 import com.adventure.picturebackend.config.SpaceCapacityConfig;
+import com.adventure.picturebackend.manager.auth.SpaceUserAuthManager;
 import com.adventure.picturebackend.model.dto.sapce.SpaceAddRequest;
 import com.adventure.picturebackend.model.dto.sapce.SpaceQueryRequest;
 import com.adventure.picturebackend.model.dto.sapce.SpaceUpdateRequest;
+import com.adventure.picturebackend.model.entity.Picture;
 import com.adventure.picturebackend.model.entity.Space;
 import com.adventure.picturebackend.model.entity.User;
+import com.adventure.picturebackend.model.vo.PictureVO;
 import com.adventure.picturebackend.model.vo.space.SpaceLevelVO;
 import com.adventure.picturebackend.model.vo.space.SpaceVO;
 import com.adventure.picturebackend.service.SpaceService;
@@ -21,12 +24,8 @@ import com.adventure.picturebackend.service.UserService;
 import com.mybatisflex.core.paginate.Page;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -49,13 +48,10 @@ public class SpaceController {
     @Autowired
     private SpaceCapacityConfig spaceCapacityConfig;
 
-    @GetMapping("/list/level")
-    public BaseResponse<List<SpaceLevelVO>> listSpaceLevel() {
-        List<SpaceLevelVO> spaceLevelList = spaceService.getSpaceLevels();
-        String ipAddr = IpHelper.getIpAddr();
-        log.info("ip: {}",ipAddr);
-        return ResultUtils.success(spaceLevelList);
-    }
+    @Autowired
+    private SpaceUserAuthManager spaceUserAuthManager;
+
+
 
 
     /**
@@ -108,5 +104,41 @@ public class SpaceController {
         Page<SpaceVO> spaceVOPage = spaceService.getSpaceVoList(picturePage, request);
         return ResultUtils.success(spaceVOPage);
 
+    }
+
+    /**
+     * 根据空间主键获取详细信息（脱敏）。
+     *
+     * @param id 图片主键
+     * @return 图片详情
+     */
+    @GetMapping("/{id}")
+    public BaseResponse<SpaceVO> getSpaceVOById(@PathVariable Long id, HttpServletRequest request) {
+        // 参数校验
+        if (id <= 0) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR);
+        }
+        // 查询数据库
+        Space space = spaceService.getById(id);
+        SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
+        ThrowUtils.throwIf(spaceVO == null, ErrorCode.NOT_FOUND_ERROR);
+        // 空间权限校验 只空间管理员查看
+//        Long spaceId = spaceVO.getSpaceId();
+//        if (spaceId != null) {
+//            spaceService.checkPictureAuth(loginUser, picture);
+//        }
+//        PictureVO pictureVO = pictureService.getPictureVO(picture, request);
+        User loginUser = userService.getLoginUser(request);
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        spaceVO.setPermissionList(permissionList);
+        return ResultUtils.success(spaceVO);
+    }
+
+    @GetMapping("/list/level")
+    public BaseResponse<List<SpaceLevelVO>> listSpaceLevel() {
+        List<SpaceLevelVO> spaceLevelList = spaceService.getSpaceLevels();
+        String ipAddr = IpHelperUtils.getIpAddr();
+        log.info("ip: {}",ipAddr);
+        return ResultUtils.success(spaceLevelList);
     }
 }

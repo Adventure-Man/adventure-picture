@@ -1,10 +1,11 @@
 package com.adventure.picturebackend.service.impl;
 
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.json.JSONUtil;
 import com.adventure.picturebackend.common.exception.BusinessException;
 import com.adventure.picturebackend.common.req.SpaceAnalyzeRequest;
-import com.adventure.picturebackend.common.utils.ErrorCode;
-import com.adventure.picturebackend.common.utils.ThrowUtils;
+import com.adventure.picturebackend.common.exception.ErrorCode;
+import com.adventure.picturebackend.common.exception.ThrowUtils;
 import com.adventure.picturebackend.model.dto.sapce.analyze.*;
 import com.adventure.picturebackend.model.entity.Picture;
 import com.adventure.picturebackend.model.entity.Space;
@@ -16,6 +17,7 @@ import com.adventure.picturebackend.service.SpaceService;
 import com.adventure.picturebackend.service.UserService;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.row.Row;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +30,7 @@ import java.util.stream.Collectors;
  * @description TODO
  */
 @Service
+@Slf4j
 public class SpaceAnalyzeServiceImpl implements SpaceAnalyzeService {
 
     @Autowired
@@ -92,8 +95,8 @@ public class SpaceAnalyzeServiceImpl implements SpaceAnalyzeService {
             spaceUsageAnalyzeResponse.setUsedCount(usedCount);
             // 公共图库无上限、无比例
             spaceUsageAnalyzeResponse.setMaxSize(null);
-            spaceUsageAnalyzeResponse.setSizeUsageRatio(null);
             spaceUsageAnalyzeResponse.setMaxCount(null);
+            spaceUsageAnalyzeResponse.setSizeUsageRatio(null);
             spaceUsageAnalyzeResponse.setCountUsageRatio(null);
             return spaceUsageAnalyzeResponse;
         } else {
@@ -167,16 +170,21 @@ public class SpaceAnalyzeServiceImpl implements SpaceAnalyzeService {
         queryWrapper.select(Picture::getTags);
         List<Object> taglist = pictureService.getMapper().selectObjectListByQuery(queryWrapper);
         List<String> tags = taglist.stream()
+                .filter(Objects::nonNull)
                 .map(Object::toString)
-                .flatMap(tag -> Arrays.stream(tag.split(",")))
                 .toList();
         // 合并标签，统计使用的次数
+        log.info("tags: {}", tags);
+
+        // 数组扁平化 [ ["aa","bb"],["cc"],["dd"]] -> [ "aa","bb","cc","dd"]
         Map<String, Long> tagCountMap = tags.stream()
+                .flatMap(tagsJson -> JSONUtil.parseArray(tagsJson).toList(String.class).stream())
                 .collect(Collectors.groupingBy(String::toString, Collectors.counting()));
         // 转换成响应对象,按照使用次数降序
         return tagCountMap.entrySet().stream()
                 .map(entry -> new SpaceTagAnalyzeResponse(entry.getKey(), entry.getValue()))
-                .sorted(Comparator.comparingLong(SpaceTagAnalyzeResponse::getCount).reversed())
+                .sorted((a, b) -> -Long.compare(b.getCount(), a.getCount()))
+//                .sorted(Comparator.comparingLong(SpaceTagAnalyzeResponse::getCount).reversed())
                 .toList();
     }
 
@@ -227,7 +235,8 @@ public class SpaceAnalyzeServiceImpl implements SpaceAnalyzeService {
                 queryWrapper.select("DATE_FORMAT(createTime, '%Y-%m-%d') AS period", "COUNT(*) AS count");
                 break;
             case "week":
-                queryWrapper.select("YEARWEEK(createTime) AS period", "COUNT(*) AS count");
+//                queryWrapper.select("YEARWEEK(createTime) AS period", "COUNT(*) AS count");
+                queryWrapper.select("DATE_FORMAT(createTime,'%Y-%u') AS period", "COUNT(*) AS count");
                 break;
             case "month":
                 queryWrapper.select("DATE_FORMAT(createTime, '%Y-%m') AS period", "COUNT(*) AS count");

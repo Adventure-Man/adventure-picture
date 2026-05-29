@@ -49,15 +49,20 @@ public class ColorSimilarUtils {
 
     // 示例代码
     public static void main(String[] args) {
-        // 测试颜色
-        Color color1 = Color.decode("0xFF0000");
-        Color color2 = Color.decode("0xFE0101");
-        double similarity = calculateSimilarity(color1, color2);
+//        // 测试颜色
+//        Color color1 = Color.decode("0xFF0000");
+//        Color color2 = Color.decode("0xFE0101");
+//        double similarity = calculateSimilarity(color1, color2);
+//
+//        System.out.println("颜色相似度为：" + similarity);
+//
+//        // 测试十六进制方法
+//        double hexSimilarity = calculateSimilarity("0xFF0000", "0xFE0101");
+//        System.out.println("十六进制颜色相似度为：" + hexSimilarity);
 
-        System.out.println("颜色相似度为：" + similarity);
-
-        // 测试十六进制方法
-        double hexSimilarity = calculateSimilarity("0xFF0000", "0xFE0101");
-        System.out.println("十六进制颜色相似度为：" + hexSimilarity);
+        String aa = "aa";
+        String bb = "aa";
+        String aa1 = new String("aa");
+        System.out.printf(String.valueOf(aa==aa1));
     }
 }

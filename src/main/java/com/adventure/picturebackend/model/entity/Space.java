@@ -1,6 +1,7 @@
 package com.adventure.picturebackend.model.entity;
 
 import com.adventure.picturebackend.model.enums.SpaceLevelEnum;
+import com.adventure.picturebackend.model.enums.SpaceTypeEnum;
 import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.KeyType;
@@ -107,6 +108,6 @@ public class Space implements Serializable {
      * 空间类型：0-个人空间 1-团队空间
      */
     @Column("spaceType")
-    private Integer spaceType;
+    private SpaceTypeEnum spaceType;
 
 }

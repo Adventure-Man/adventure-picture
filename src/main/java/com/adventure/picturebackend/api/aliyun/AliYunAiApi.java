@@ -7,7 +7,7 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONUtil;
 import com.adventure.picturebackend.common.exception.BusinessException;
-import com.adventure.picturebackend.common.utils.ErrorCode;
+import com.adventure.picturebackend.common.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

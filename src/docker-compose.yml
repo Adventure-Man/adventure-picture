@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # MySQL 8 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: 24994627
+      MYSQL_DATABASE: mp  # 可选：自动创建数据库
+    ports:
+      - "3306:3306"
+    volumes:
+      # 挂载数据存储卷（重要：防止数据丢失）
+      - ./mysql/mysql-data:/var/lib/mysql
+      - ./mysql/mysql-conf:/etc/mysql/conf.d
+      # 挂载初始化脚本目录
+      - ./mysql/mysql-init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+
+  # Redis 服务（无密码）
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis/redis-data:/data
+    restart: always
+
+  # Spring Boot 应用
+  app:
+    build: .                 # 使用当前目录的 Dockerfile 构建
+    container_name: springboot-app
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mp?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 24994627
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    depends_on:
+      - mysql
+      - redis
+    restart: on-failure
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./nginx/html:/usr/share/nginx/html
+      - ./nginx/conf/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - app
+volumes:
+  mysql_data:
+  mysql_config:
+  redis_data:

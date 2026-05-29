@@ -1,6 +1,6 @@
 package com.adventure.picturebackend.common.resp;
 
-import com.adventure.picturebackend.common.utils.ErrorCode;
+import com.adventure.picturebackend.common.exception.ErrorCode;
 import lombok.Data;
 
 /**
@@ -31,6 +31,11 @@ public class BaseResponse<T> {
     }
     public BaseResponse(ErrorCode errorCode,String message) {
         this.code = errorCode.getCode();
+        this.data = null;
+        this.message = message;
+    }
+    public BaseResponse(int code, String message) {
+        this.code = code;
         this.data = null;
         this.message = message;
     }

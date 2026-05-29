@@ -1,23 +1,30 @@
 server:
   port: 8081
   servlet:
-    context-path: /api
+#    context-path: /api
     session:
-      timeout: 60m
+      timeout: 2592000
       #      设置cookie的过期时间1个 月
       cookie:
         max-age: 2592000
+#        max-age: 60
 spring:
   session:
     store-type: redis
+#    timeout: 60
     timeout: 2592000
+    redis:
+      repository-type: default
   servlet:
     multipart:
+      enabled: true
       max-file-size: 10MB
+      max-request-size: 10MB
+
   application:
     name: picture-service
   profiles:
-    active: dev
+    active: prod
   datasource:
       url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?useUnicode=true&characterEncoding=UTF-8&allowMultiQueries=true&useSSL=false&serverTimezone=Asia/Shanghai
       username: ${mysql.username}
@@ -26,9 +33,10 @@ spring:
 
   data:
     redis:
-      database: 3
-      host: 127.0.0.1
-      port: 6379
+      database: ${redis.database}
+#      host: 127.0.0.1
+      host: ${redis.host}
+      port: ${redis.port}
       # password:
       # 连接超时时间
       timeout: 10s
@@ -47,6 +55,7 @@ sa-token:
   token-header-name: Authorization
   redis-timeout: 1000
   timeout: 2592000
+#  timeout: 60
   jwt-secret-key: clt74GDp0svH9nxZuXqFjEL1BsGmDf85
   is-concurrent: false
   is-print: true # 开发环境建议开启日志输出
@@ -59,7 +68,7 @@ mybatis-flex:
     map-underscore-to-camel-case: false
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
-    logic-delete-column: flag_delete
+    logic-delete-column: isDelete
     deleted-value-of-logic-delete: 1
     normal-value-of-logic-delete: 0
 
@@ -107,6 +116,4 @@ space:
       # 10000M
       max-size: 10485760000
 
-# 阿里云 AI 配置
-aliYunAi:
-  apiKey: xxxx
+

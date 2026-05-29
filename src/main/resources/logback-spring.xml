@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="10 seconds">
+    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter" />
+
+    <!-- 日志根目录：项目所在目录下的 adventurePicture-logs -->
+    <property name="LOG_HOME" value="${user.dir}/adventurePicture-logs"/>
+
+    <!-- 控制台输出 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+<!--            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%level] [%thread] %logger{36}.%method:%line - %msg%n</pattern>-->
+            <pattern>
+                %clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} [%clr(%5level)] %clr([%thread]){magenta} %clr(%logger{36}.%method:%line){cyan} - %msg%n
+            </pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 文件输出：每天一个目录，每天一个主日志文件 -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 当前正在写的日志文件路径 -->
+        <file>${LOG_HOME}/current/app.log</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- 关键：按天滚动，且目录名包含日期 -->
+            <!-- Logback 会自动创建 2026-02-06 目录 -->
+            <fileNamePattern>${LOG_HOME}/%d{yyyy-MM-dd}/app.%i.log</fileNamePattern>
+
+            <!-- 保留最近7天的日志目录 -->
+            <maxHistory>7</maxHistory>
+
+            <!-- 单个文件最大100MB，防止过大（可选） -->
+            <timeBasedFileNamingAndTriggeringPolicy
+                    class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>100MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%level] [%thread] %logger{36}.%method:%line - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 默认日志级别为 INFO -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>

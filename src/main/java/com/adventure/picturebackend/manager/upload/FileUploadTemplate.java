@@ -4,7 +4,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.IdUtil;
 import com.adventure.picturebackend.common.exception.BusinessException;
-import com.adventure.picturebackend.common.utils.ErrorCode;
+import com.adventure.picturebackend.common.exception.ErrorCode;
 import com.adventure.picturebackend.config.CosClientConfig;
 import com.adventure.picturebackend.manager.CosManager;
 import com.adventure.picturebackend.model.dto.picture.UploadPictureResult;
@@ -72,8 +72,9 @@ public abstract class FileUploadTemplate {
             if (objectList != null && !objectList.isEmpty()){
                 // 获取原图 压缩图
                 CIObject compressedCiobject = objectList.get(0);
-                // 如果存在缩略图
+                // 缩略图默认等于压缩图
                 CIObject thumbnailCiobject = compressedCiobject;
+                // 如果存在缩略图
                 if (objectList.size() > 1){
                     thumbnailCiobject = objectList.get(1);
                 }

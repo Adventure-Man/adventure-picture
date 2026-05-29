@@ -7,7 +7,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.adventure.picturebackend.api.imagesearch.ImageSearchResult;
 import com.adventure.picturebackend.common.exception.BusinessException;
-import com.adventure.picturebackend.common.utils.ErrorCode;
+import com.adventure.picturebackend.common.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;

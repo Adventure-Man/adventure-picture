@@ -1,7 +1,7 @@
 package com.adventure.picturebackend.api.sub;
 
 import com.adventure.picturebackend.common.exception.BusinessException;
-import com.adventure.picturebackend.common.utils.ErrorCode;
+import com.adventure.picturebackend.common.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;

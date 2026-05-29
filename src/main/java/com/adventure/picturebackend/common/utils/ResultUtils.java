@@ -1,5 +1,6 @@
 package com.adventure.picturebackend.common.utils;
 
+import com.adventure.picturebackend.common.exception.ErrorCode;
 import com.adventure.picturebackend.common.resp.BaseResponse;
 
 /**

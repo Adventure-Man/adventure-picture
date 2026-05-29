@@ -11,8 +11,8 @@ import com.adventure.picturebackend.api.aliyun.CreateOutPaintingTaskRequest;
 import com.adventure.picturebackend.api.aliyun.CreateOutPaintingTaskResponse;
 import com.adventure.picturebackend.common.exception.BusinessException;
 import com.adventure.picturebackend.common.utils.ColorSimilarUtils;
-import com.adventure.picturebackend.common.utils.ErrorCode;
-import com.adventure.picturebackend.common.utils.ThrowUtils;
+import com.adventure.picturebackend.common.exception.ErrorCode;
+import com.adventure.picturebackend.common.exception.ThrowUtils;
 import com.adventure.picturebackend.manager.CosManager;
 import com.adventure.picturebackend.manager.FileManager;
 import com.adventure.picturebackend.manager.upload.FilePictureUpload;
@@ -23,7 +23,6 @@ import com.adventure.picturebackend.model.entity.Picture;
 import com.adventure.picturebackend.model.entity.Space;
 import com.adventure.picturebackend.model.entity.User;
 import com.adventure.picturebackend.model.enums.PictureReviewStatusEnum;
-import com.adventure.picturebackend.model.enums.SpaceLevelEnum;
 import com.adventure.picturebackend.model.vo.PictureVO;
 import com.adventure.picturebackend.model.vo.UserVO;
 import com.adventure.picturebackend.service.SpaceService;
@@ -46,6 +45,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.connection.ReturnType;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -59,6 +60,7 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -79,7 +81,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     private UserService userService;
 
     // 定义锁的key
-    public static final String LOCKKEY = "lock:picture:review:";
+    private static final String LOCKKEY = "picture_review_lock:";
+    private static final long LOCK_EXPIRE_TIME = 2L; // 锁过期时间2秒
 
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
@@ -209,7 +212,18 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         UploadPictureResult uploadPictureResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
         // 构造要入库的图片信息
         // 保存图片信息
-        Picture picture = Picture.builder().url(uploadPictureResult.getUrl()).thumbnailUrl(uploadPictureResult.getThumbnailUrl()).picWidth(uploadPictureResult.getPicWidth()).picHeight(uploadPictureResult.getPicHeight()).picSize(uploadPictureResult.getPicSize()).picFormat(uploadPictureResult.getPicFormat()).picScale(uploadPictureResult.getPicScale()).userId(loginUser.getId()).spaceId(spaceId).picColor(uploadPictureResult.getPicColor()).build();
+        Picture picture = Picture.builder()
+                .url(uploadPictureResult.getUrl())
+                .thumbnailUrl(uploadPictureResult.getThumbnailUrl())
+                .picWidth(uploadPictureResult.getPicWidth())
+                .picHeight(uploadPictureResult.getPicHeight())
+                .picSize(uploadPictureResult.getPicSize())
+                .picFormat(uploadPictureResult.getPicFormat())
+                .picScale(uploadPictureResult.getPicScale())
+                .userId(loginUser.getId())
+                .spaceId(spaceId)
+                .picColor(uploadPictureResult.getPicColor())
+                .build();
         // 设置图片名称
         String picName = uploadPictureResult.getPicName();
         if (StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
@@ -219,13 +233,15 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
         // 填充审核参数
         this.fillReviewParams(picture, loginUser);
-        //  通过编式事务保存图片信息,更新图片额度
+        // 通过编式事务保存图片信息,若是私有空间则更新图片额度
         Boolean execute = transactionTemplate.execute((status) -> {
             boolean result = this.saveOrUpdate(picture);
             ThrowUtils.throwIf(!result, ErrorCode.SERVER_RESPONSE_ERROR, "上传图片信息失败");
-            // 更新图片额度
-            boolean res = spaceService.updateSpaceQuota(spaceId, uploadPictureResult.getPicSize(), 1, false);
-            ThrowUtils.throwIf(!res, ErrorCode.SERVER_RESPONSE_ERROR, "更新图片额度失败");
+            // 更新私有空间图片额度
+            if (spaceId != null) {
+                boolean res = spaceService.updateSpaceQuota(spaceId, uploadPictureResult.getPicSize(), 1, false);
+                ThrowUtils.throwIf(!res, ErrorCode.SERVER_RESPONSE_ERROR, "更新图片额度失败");
+            }
             return true;
         });
         ThrowUtils.throwIf(execute == null || !execute, ErrorCode.SERVER_RESPONSE_ERROR, "上传图片信息失败");
@@ -235,6 +251,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         return pictureVO; // Return the correct type
     }
 
+    /**
+     * multipartFile 文件上传
+     *
+     * @param pictureQueryRequest
+     * @param request
+     * @return
+     */
 //    @Override
 //    public PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, User loginUser) {
 //        ThrowUtils.throwIf(loginUser == null, ErrorCode.NOT_PERMISSION, "用户没有权限");
@@ -316,9 +339,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         // 空间权限校验
         Long spaceId = pictureQueryRequest.getSpaceId();
         // 公开图库
-        if (spaceId == null) {
-            // 普通用户默认只能查看已过审的公开数据
-            pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+        if (spaceId == null ) {
             pictureQueryRequest.setNullSpaceId(true);
         } else {
             // 私有空间
@@ -338,7 +359,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             queryWrapper.and(Picture::getName).like(searchText).or(Picture::getIntroduction).like(searchText);
 //            queryWrapper.and(qw -> qw.like("name", searchText)
 //                    .or()
-//                    .like("introduction", searchText)
+//                    .like("introduction", searchText);
         }
         queryWrapper.eq("id", id, ObjUtil.isNotEmpty(id));
         queryWrapper.eq("userId", userId, ObjUtil.isNotEmpty(userId));
@@ -352,7 +373,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         queryWrapper.eq("picScale", picScale, ObjUtil.isNotEmpty(picScale));
         // 普通用户只能查询审核通过的图片
         queryWrapper.eq("reviewerId", reviewerId, ObjUtil.isNotEmpty(reviewerId));
-        queryWrapper.eq("reviewStatus", PictureReviewStatusEnum.PASS.getValue(), ObjUtil.isNotEmpty(reviewStatus));
+        queryWrapper.eq("reviewStatus", reviewStatus, ObjUtil.isNotEmpty(reviewStatus));
         queryWrapper.eq("reviewMessage", reviewMessage, ObjUtil.isNotEmpty(reviewMessage));
         // 是否查询空间图片 null:是公共空间
         queryWrapper.eq("spaceId", spaceId, ObjUtil.isNotEmpty(spaceId));
@@ -370,8 +391,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         if (StrUtil.isNotBlank(sortField)) {
             queryWrapper.orderBy(new QueryOrderBy(new QueryColumn(sortField), sortOrder));
         }
-
-
         return queryWrapper;
     }
 
@@ -429,13 +448,16 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void doPictureReview(PictureReviewRequest pictureReviewRequest, User loginUser) {
         Long id = pictureReviewRequest.getId();
         Integer reviewStatus = pictureReviewRequest.getReviewStatus();
         String reviewMessage = pictureReviewRequest.getReviewMessage();
         ThrowUtils.throwIf(id == null || reviewStatus == null || reviewStatus == PictureReviewStatusEnum.REVIEWING.getValue(), ErrorCode.PARAMS_ERROR);
+        String lockKey = LOCKKEY + id;
+        String lockValue = generateLockValue(); // 生成唯一值防止误删
         try {
-            Boolean isLocked = redisTemplate.opsForValue().setIfAbsent(LOCKKEY + id, "locked", 2, TimeUnit.SECONDS);
+            Boolean isLocked = redisTemplate.opsForValue().setIfAbsent(lockKey, lockValue, LOCK_EXPIRE_TIME, TimeUnit.SECONDS);
             ThrowUtils.throwIf(!Boolean.TRUE.equals(isLocked), ErrorCode.OPERATION_ERROR, "获取锁失败，操作失败");
             Picture picture = this.getById(id);
             ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
@@ -453,7 +475,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             boolean b = this.updateById(updatePicture);
             ThrowUtils.throwIf(!b, ErrorCode.OPERATION_ERROR);
             if (reviewStatus == PictureReviewStatusEnum.PASS.getValue()) {
-                // 审核通过，更新用户积分+10
+                // 审核通过，异步更新用户积分+10
                 Long userId = picture.getUserId();
                 User user = userService.getById(userId);
                 if (user != null) {
@@ -468,6 +490,65 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             redisTemplate.delete(LOCKKEY + id);
         }
     }
+
+    /**
+     * 生成唯一的锁值，防止误删
+     */
+    private String generateLockValue() {
+        return Thread.currentThread().getName() + "_" + System.currentTimeMillis() + "_" + UUID.randomUUID();
+    }
+
+    /**
+     * 安全释放分布式锁
+     */
+//    private void releaseDistributedLock(String lockKey, String lockValue) {
+//        // 使用Lua脚本确保原子性，防止误删其他线程的锁
+//        String luaScript =
+//                "if redis.call('get', KEYS[1]) == ARGV[1] then " +
+//                        "return redis.call('del', KEYS[1]) " +
+//                        "else return 0 end";
+//
+//        try {
+//            redisTemplate.execute(
+//                    (RedisCallback<Long>) connection ->
+//                            connection.eval(luaScript.getBytes(),
+//                                    ReturnType.INTEGER,
+//                                    1,
+//                                    lockKey.getBytes(),
+//                                    lockValue.getBytes())
+//            );
+//        } catch (Exception e) {
+//            log.error("释放分布式锁失败，key: {}", lockKey, e);
+//        }
+//    }
+
+    /**
+     * 异步更新用户积分
+     */
+//    private void asyncUpdateUserScore(Long userId) {
+//        CompletableFuture.runAsync(() -> {
+//            try {
+//                User user = userService.getById(userId);
+//                if (user != null) {
+//                    Integer currentScore = user.getScore();
+//                    Integer newScore = currentScore + 10;
+//                    user.setScore(newScore);
+//
+//                    boolean updateResult = userService.updateById(user);
+//                    if (updateResult) {
+//                        log.info("用户积分更新成功，用户ID：{}，新积分：{}", userId, newScore);
+//                    } else {
+//                        log.error("用户积分更新失败，用户ID：{}", userId);
+//                        // 可以考虑加入重试机制或记录到异常表
+//                    }
+//                }
+//            } catch (Exception e) {
+//                log.error("异步更新用户积分时发生异常，用户ID：" + userId, e);
+//                // 记录失败情况，后续可通过定时任务重试
+//            }
+//        });
+//    }
+
 
     @Override
     public void fillReviewParams(Picture picture, User loginUser) {
@@ -630,8 +711,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             boolean result = this.removeById(pictureId);
             ThrowUtils.throwIf(!result, ErrorCode.SERVER_RESPONSE_ERROR, "上传图片信息失败");
             // 更新图片额度
-            boolean res = spaceService.updateSpaceQuota(spaceId, picSize, 1, true);
-            ThrowUtils.throwIf(!res, ErrorCode.SERVER_RESPONSE_ERROR, "更新图片额度失败");
+            if (spaceId != null){
+                boolean res = spaceService.updateSpaceQuota(spaceId, picSize, 1, true);
+                ThrowUtils.throwIf(!res, ErrorCode.SERVER_RESPONSE_ERROR, "更新图片额度失败");
+            }
             return true;
         });
         ThrowUtils.throwIf(execute == null || !execute, ErrorCode.OPERATION_ERROR);

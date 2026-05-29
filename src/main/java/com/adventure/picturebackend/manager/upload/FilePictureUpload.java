@@ -1,8 +1,8 @@
 package com.adventure.picturebackend.manager.upload;
 
 import cn.hutool.core.util.StrUtil;
-import com.adventure.picturebackend.common.utils.ErrorCode;
-import com.adventure.picturebackend.common.utils.ThrowUtils;
+import com.adventure.picturebackend.common.exception.ErrorCode;
+import com.adventure.picturebackend.common.exception.ThrowUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -47,7 +47,6 @@ public class FilePictureUpload extends FileUploadTemplate {
     public String getSourceFileName(Object inputSource) {
         MultipartFile multipartFile = (MultipartFile) inputSource;
         return multipartFile.getOriginalFilename();
-
     }
 
     @Override
